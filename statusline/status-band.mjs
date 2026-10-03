@@ -12,6 +12,7 @@
 //   --theme   clay | paper | aurora | ink           STATUS_BAND_THEME
 //   --shape   auto | chips | arrows | line          STATUS_BAND_SHAPE
 //   --glyphs  unicode | nerd | ascii                STATUS_BAND_GLYPHS
+//   --time    elapsed | clock | clock12 | off       STATUS_BAND_TIME
 //   --hide    model,dir,git,ctx,quota,cost          STATUS_BAND_HIDE
 //   --colors  truecolor | 256                       STATUS_BAND_COLORS
 //   --demo    steady | fresh | warm | hot | apikey  (ignores stdin)
@@ -29,6 +30,7 @@ function parseArgs(argv, env) {
     theme: env.STATUS_BAND_THEME,
     shape: env.STATUS_BAND_SHAPE,
     glyphs: env.STATUS_BAND_GLYPHS,
+    time: env.STATUS_BAND_TIME,
     hide: env.STATUS_BAND_HIDE,
     colors: env.STATUS_BAND_COLORS,
     demo: null,

@@ -20,7 +20,7 @@
 | Git | `⎇ main +2 ~3 ↑1` | 已暂存、未暂存/未跟踪、领先/落后。窄时折叠成 `⎇ main ●`。 |
 | 上下文 | `ctx ━━━━────── 42% 84k/200k` | 随占用增长：60% 起变琥珀色，85% 起变红色。 |
 | 剩余额度 | `5h ━━━━━━── 72% left ↻2h14m  7d 59% ↻3d` | Pro/Max 订阅可见。随消耗减少：剩 40% 变琥珀色，低于 15% 变红色。`↻` 是距离额度刷新的倒计时。网关的花费上限也显示在这里。 |
-| 花费 · 时长 | `$1.42  ◷ 23m` | 用 API key 计费时没有额度窗口，花费会被高亮。 |
+| 花费 · 时间 | `$1.42  ◷ 23m` | 默认显示本次会话时长，`/band time clock` 改为显示当前时间。用 API key 计费时没有额度窗口，花费会被高亮。 |
 
 ![各种状态](docs/states.svg)
 
@@ -59,6 +59,7 @@ claude --plugin-dir ./cc-status-band
 /band line                 形状：auto | chips | arrows | line
 /band nerd                 字符集：unicode | nerd | ascii
 /band above                位置：below | above
+/band time clock           花费旁的时间：elapsed（会话时长）| clock（13:24）| clock12（01:24PM）| off
 /band hide cost git        隐藏段：model dir git ctx quota cost
 /band show cost
 /band hint off             不再在状态栏下方保留 Claude Code 自带的提示行
@@ -84,6 +85,7 @@ node ~/.claude/cc-status-band/scripts/install-statusline.mjs --theme clay
 | `--theme` | `STATUS_BAND_THEME` | `clay`（默认）、`paper`、`aurora`、`ink` |
 | `--shape` | `STATUS_BAND_SHAPE` | `auto`（主题默认）、`chips`、`arrows`、`line` |
 | `--glyphs` | `STATUS_BAND_GLYPHS` | `unicode`（默认）、`nerd`、`ascii` |
+| `--time` | `STATUS_BAND_TIME` | `elapsed`（默认）、`clock`、`clock12`、`off` |
 | `--hide` | `STATUS_BAND_HIDE` | 逗号分隔：`model,dir,git,ctx,quota,cost` |
 | `--colors` | `STATUS_BAND_COLORS` | `truecolor` 或 `256`（默认根据 `COLORTERM`/`TERM_PROGRAM` 自动判断） |
 

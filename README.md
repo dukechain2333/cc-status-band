@@ -20,7 +20,7 @@ It ships two ways from one codebase:
 | Git | `⎇ main +2 ~3 ↑1` | Staged, unstaged/untracked, ahead/behind. Folds to `⎇ main ●` when narrow. |
 | Context | `ctx ━━━━────── 42% 84k/200k` | Fills as the window fills: amber from 60%, red from 85%. |
 | Quota left | `5h ━━━━━━── 72% left ↻2h14m  7d 59% ↻3d` | Pro/Max subscribers. Drains as you spend: amber at 40% left, red under 15%. `↻` counts down to the refill. Gateway spend limits show here too. |
-| Cost · time | `$1.42  ◷ 23m` | With API-key billing there are no quota windows, so spend is highlighted instead. |
+| Cost · time | `$1.42  ◷ 23m` | The session's running time by default, or the wall clock with `/band time clock`. With API-key billing there are no quota windows, so spend is highlighted instead. |
 
 ![States: fresh, steady, warm, hot, API key](docs/states.svg)
 
@@ -60,6 +60,7 @@ Run `/band` to open the picker. A digit picks a theme, a letter picks a shape, g
 
 shape    d: theme default   c: chips   a: arrows   l: line
 glyphs   u: unicode   n: nerd font   p: plain ascii
+time     e: session time   k: clock 24h   h: clock 12h   o: off
 place    b: below prompt   t: above prompt
 ```
 
@@ -70,6 +71,7 @@ Or set things directly. Each word sets whatever it names:
 /band line                 shape: auto | chips | arrows | line
 /band nerd                 glyphs: unicode | nerd | ascii
 /band above                place: below | above
+/band time clock           time beside the cost: elapsed | clock (13:24) | clock12 (01:24PM) | off
 /band hide cost git        hide segments: model dir git ctx quota cost
 /band show cost
 /band hint off             drop Claude Code's own hint line under the band
@@ -106,6 +108,7 @@ Flags (or environment variables):
 | `--theme` | `STATUS_BAND_THEME` | `clay` (default), `paper`, `aurora`, `ink` |
 | `--shape` | `STATUS_BAND_SHAPE` | `auto` (the theme's own), `chips`, `arrows`, `line` |
 | `--glyphs` | `STATUS_BAND_GLYPHS` | `unicode` (default), `nerd`, `ascii` |
+| `--time` | `STATUS_BAND_TIME` | `elapsed` (default), `clock`, `clock12`, `off` |
 | `--hide` | `STATUS_BAND_HIDE` | comma list: `model,dir,git,ctx,quota,cost` |
 | `--colors` | `STATUS_BAND_COLORS` | `truecolor` or `256` (detected from `COLORTERM`/`TERM_PROGRAM` by default) |
 

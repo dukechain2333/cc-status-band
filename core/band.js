@@ -10,16 +10,20 @@
 //     git: { branch, staged, changed, ahead, behind } | null,
 //     context: { percent, tokens, window } | null,
 //     limits: { five: { left, resetsAt }, seven: {…}, spend: {…} },   // each may be null
-//     cost: 1.42 | null, elapsedMs: 1380000 | null, now: Date.now(),
+//     cost: 1.42 | null, elapsedMs: 1380000 | null, now: Date.now(),   // now also drives the clock
 //   }
 //
 // `left` is the percentage of a quota window still unused, and `resetsAt` is
 // epoch milliseconds.
 
-import { effortPips, formatDuration, formatPath, formatResetIn, formatTokens, formatUsd, textWidth } from './format.js'
+import { effortPips, formatClock, formatDuration, formatPath, formatResetIn, formatTokens, formatUsd, textWidth } from './format.js'
 import { resolveGlyphs, resolveShape, resolveTheme } from './themes.js'
 
 export const SEGMENT_IDS = ['model', 'dir', 'git', 'ctx', 'quota', 'cost']
+
+// What the time beside the cost shows: the session's running time, the wall
+// clock (24-hour or 12-hour), or nothing.
+export const TIME_MODES = ['elapsed', 'clock', 'clock12', 'off']
 
 // Context fills up: it turns amber at 60% used and red at 85%.
 export function contextRole(percent) {
@@ -128,26 +132,29 @@ function quotaSegment(s, g, level) {
   return { id: 'quota', label: 'quota left', items }
 }
 
-function costSegment(s, g, level, hero) {
-  if (s.cost == null && s.elapsedMs == null) return null
+function timeText(s, time) {
+  if (time === 'off') return ''
+  if (time === 'clock' || time === 'clock12') return formatClock(s.now, time === 'clock12')
+  return s.elapsedMs == null ? '' : formatDuration(s.elapsedMs)
+}
+
+function costSegment(s, g, level, hero, time) {
   if (level === -1 && !hero) return null
   const items = []
   if (s.cost != null) items.push(text(formatUsd(s.cost), hero ? 'accent' : 'fg', hero))
-  if (level === 0 && s.elapsedMs != null) {
-    const d = formatDuration(s.elapsedMs)
-    if (d) items.push(text((items.length ? '  ' : '') + (g.clock ? g.clock + ' ' : '') + d, 'muted'))
-  }
+  const t = level === 0 ? timeText(s, time) : ''
+  if (t) items.push(text((items.length ? '  ' : '') + (g.clock ? g.clock + ' ' : '') + t, 'muted'))
   return items.length ? { id: 'cost', label: hero ? 'api spend · time' : 'cost · time', items } : null
 }
 
-function buildSegments(s, g, levels, hide) {
+function buildSegments(s, g, levels, { hide, time }) {
   const limits = s.limits || {}
   // Without quota windows (API-key billing) spend is the number to watch.
   const hero = !limits.five && !limits.seven && !limits.spend && s.cost > 0
   const out = []
   const add = (id, make) => {
     if (hide.includes(id) || levels[id] < -1 || (levels[id] < 0 && id !== 'cost')) return
-    const seg = make(s, g, levels[id], hero)
+    const seg = make(s, g, levels[id], hero, time)
     if (seg) out.push(seg)
   }
   add('model', modelSegment)
@@ -184,13 +191,16 @@ export function layoutBand(snapshot, options = {}, columns = 120) {
   // A palette without fills has nothing to draw chips or arrows with.
   const shape = theme.model.bg ? resolveShape(options.shape, theme) : 'line'
   const glyphs = resolveGlyphs(options.glyphs)
-  const hide = Array.isArray(options.hide) ? options.hide : []
+  const pick = {
+    hide: Array.isArray(options.hide) ? options.hide : [],
+    time: TIME_MODES.includes(options.time) ? options.time : 'elapsed',
+  }
   const levels = { model: 0, dir: 0, git: 0, ctx: 0, quota: 0, cost: 0 }
-  let segments = buildSegments(snapshot, glyphs, levels, hide)
+  let segments = buildSegments(snapshot, glyphs, levels, pick)
   for (const [id, level] of FOLDS) {
     if (measure(segments, shape, glyphs) <= columns) break
     levels[id] = level
-    segments = buildSegments(snapshot, glyphs, levels, hide)
+    segments = buildSegments(snapshot, glyphs, levels, pick)
   }
   return { segments, theme, shape, glyphs, width: measure(segments, shape, glyphs) }
 }

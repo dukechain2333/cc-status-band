@@ -93,6 +93,16 @@ test('/band with words saves the choice and redraws', async ($, on) => {
   expect(saved.get('prefs')).toMatchObject({ theme: 'aurora', shape: 'line', glyphs: 'nerd', place: 'below' })
 })
 
+test('/band time switches the cost segment to the wall clock', async ($, on) => {
+  const { saved } = session(on)
+  await start($)
+  const answer = await $.command.run({ command: 'band', args: 'time clock12' })
+  expect(answer.text).toContain('time clock12')
+  expect(saved.get('prefs')).toMatchObject({ time: 'clock12' })
+  const ui = await $.ui.mount(HINT)
+  expect(textOf(await ui.find({ type: 'Text', text: /Opus 5\.5/ }))).toMatch(/\$1\.42 {2}◷ \d\d:\d\d[AP]M/)
+})
+
 test('/band rejects a word it does not know', async ($, on) => {
   const { saved } = session(on)
   await start($)

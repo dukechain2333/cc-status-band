@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { layoutBand, measure, paint, renderRuns } from '../core/band.js'
 import { to256, toAnsi } from '../core/ansi.js'
 import { DEMOS } from '../core/demo.js'
-import { formatPath, formatResetIn, formatTokens, modelName, textWidth } from '../core/format.js'
+import { formatClock, formatPath, formatResetIn, formatTokens, modelName, textWidth } from '../core/format.js'
 import { parseGitStatus } from '../core/git.js'
 import { fromSession, fromStatusLine } from '../core/snapshot.js'
 
@@ -40,6 +40,23 @@ test('durations and token counts read short', () => {
   assert.equal(formatTokens(84000), '84k')
   assert.equal(formatTokens(1000000), '1M')
   assert.equal(formatTokens(1500000), '1.5M')
+})
+
+test('the clock reads in 24-hour or 12-hour form', () => {
+  const at = (h, m) => new Date(2026, 9, 3, h, m).getTime()
+  assert.equal(formatClock(at(13, 4)), '13:04')
+  assert.equal(formatClock(at(13, 4), true), '01:04PM')
+  assert.equal(formatClock(at(0, 30), true), '12:30AM')
+  assert.equal(formatClock(at(9, 5)), '09:05')
+})
+
+test('the time beside the cost follows the time option', () => {
+  const snap = { ...DEMOS.steady, now: new Date(2026, 9, 3, 13, 24).getTime() }
+  const at = (time) => plain(renderRuns(snap, { theme: 'clay', time }, 200))
+  assert.ok(at('elapsed').includes('$1.42  ◷ 23m'))
+  assert.ok(at('clock').includes('$1.42  ◷ 13:24'))
+  assert.ok(at('clock12').includes('$1.42  ◷ 01:24PM'))
+  assert.ok(at('off').includes('◷') === false)
 })
 
 test('wide characters count two cells', () => {

@@ -5,7 +5,7 @@
 // API, draws the band at the render site the user picked, and runs the /band
 // picker.
 
-import { SEGMENT_IDS, layoutBand, paint } from '../core/band.js'
+import { SEGMENT_IDS, TIME_MODES, layoutBand, paint } from '../core/band.js'
 import { toElements } from '../core/elements.js'
 import { GIT_STATUS_ARGS, parseGitStatus } from '../core/git.js'
 import { fromSession } from '../core/snapshot.js'
@@ -13,7 +13,7 @@ import { GLYPH_NAMES, SHAPES, THEMES, THEME_NAMES } from '../core/themes.js'
 
 const PANE = 'status-band'
 const PLACES = ['below', 'above']
-const DEFAULTS = { theme: 'clay', shape: 'auto', glyphs: 'unicode', place: 'below', hide: [], hint: true }
+const DEFAULTS = { theme: 'clay', shape: 'auto', glyphs: 'unicode', place: 'below', time: 'elapsed', hide: [], hint: true }
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max']
 
 // What the band shows between redraws. Preferences live in $.store so every
@@ -29,13 +29,14 @@ function cleanPrefs(saved) {
   if (!SHAPES.includes(p.shape)) p.shape = DEFAULTS.shape
   if (!GLYPH_NAMES.includes(p.glyphs)) p.glyphs = DEFAULTS.glyphs
   if (!PLACES.includes(p.place)) p.place = DEFAULTS.place
+  if (!TIME_MODES.includes(p.time)) p.time = DEFAULTS.time
   p.hide = Array.isArray(p.hide) ? p.hide.filter((id) => SEGMENT_IDS.includes(id)) : []
   p.hint = p.hint !== false
   return p
 }
 
 function describePrefs(p) {
-  const parts = [`theme ${p.theme}`, `shape ${p.shape}`, `glyphs ${p.glyphs}`, `${p.place} the prompt`]
+  const parts = [`theme ${p.theme}`, `shape ${p.shape}`, `glyphs ${p.glyphs}`, `time ${p.time}`, `${p.place} the prompt`]
   if (p.hide.length) parts.push(`hiding ${p.hide.join(', ')}`)
   if (!p.hint) parts.push("Claude Code's hint line off")
   return parts.join(' · ')
@@ -53,6 +54,8 @@ function applyArgs(p, args) {
     else if (SHAPES.includes(w)) next.shape = w
     else if (GLYPH_NAMES.includes(w)) next.glyphs = w
     else if (PLACES.includes(w)) next.place = w
+    else if (w === 'time' && TIME_MODES.includes(words[i + 1])) next.time = words[(i += 1)]
+    else if (TIME_MODES.includes(w)) next.time = w
     else if (w === 'hint') {
       next.hint = words[i + 1] !== 'off'
       if (words[i + 1] === 'on' || words[i + 1] === 'off') i += 1
@@ -62,7 +65,7 @@ function applyArgs(p, args) {
       next.hide = w === 'hide' ? [...new Set([...next.hide, ...ids])] : next.hide.filter((id) => !ids.includes(id))
       i = words.length
     } else {
-      return `Unknown option "${w}". Themes: ${THEME_NAMES.join(', ')}; shapes: ${SHAPES.join(', ')}; glyphs: ${GLYPH_NAMES.join(', ')}; place: below, above; hide/show <segment>; hint on|off; reset.`
+      return `Unknown option "${w}". Themes: ${THEME_NAMES.join(', ')}; shapes: ${SHAPES.join(', ')}; glyphs: ${GLYPH_NAMES.join(', ')}; place: below, above; time: ${TIME_MODES.join(', ')}; hide/show <segment>; hint on|off; reset.`
     }
   }
   return next
@@ -152,7 +155,7 @@ export function register(on) {
       await $.command.register({
         name: 'band',
         description: 'Pick the status band theme, shape and place',
-        argumentHint: '[theme | shape | glyphs | above | below | hide <segment> | show <segment> | reset]',
+        argumentHint: '[theme | shape | glyphs | above | below | time <mode> | hide <segment> | show <segment> | reset]',
         immediate: true,
       })
     } catch {}
@@ -288,6 +291,12 @@ export function register(on) {
           ['unicode', 'unicode', 'u'],
           ['nerd', 'nerd font', 'n'],
           ['ascii', 'plain ascii', 'p'],
+        ]),
+        optionRow('time', 'time', [
+          ['elapsed', 'session time', 'e'],
+          ['clock', 'clock 24h', 'k'],
+          ['clock12', 'clock 12h', 'h'],
+          ['off', 'off', 'o'],
         ]),
         optionRow('place', 'place', [
           ['below', 'below prompt', 'b'],

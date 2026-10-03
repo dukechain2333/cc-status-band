@@ -71,6 +71,16 @@ export function formatResetIn(resetsAt, now) {
   return days < 3 && hours % 24 ? `${days}d${hours % 24}h` : `${days}d`
 }
 
+// The wall clock in the machine's time zone: 13:24, or 01:24PM with `twelve`.
+export function formatClock(ms, twelve = false) {
+  if (ms == null || !Number.isFinite(ms)) return ''
+  const d = new Date(ms)
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  if (!twelve) return `${String(d.getHours()).padStart(2, '0')}:${mm}`
+  const h = d.getHours() % 12 || 12
+  return `${String(h).padStart(2, '0')}:${mm}${d.getHours() < 12 ? 'AM' : 'PM'}`
+}
+
 // 950 · 84k · 1.2M
 export function formatTokens(n) {
   if (n == null || !Number.isFinite(n)) return ''
