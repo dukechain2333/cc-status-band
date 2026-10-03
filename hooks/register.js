@@ -234,7 +234,9 @@ export function register(on) {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (prefs.place !== 'above' || e.props.hasSurvey || e.surface !== 'terminal') return next(e)
     const { Box, Text } = $.ui.resolve(e)
-    const band = drawBand(await snapshot($), prefs, Math.max(20, e.props.bodyColumns - 1), { Box, Text })
+    // Claude Code draws its `[-]` collapse control over the band's last three
+    // cells, so the band stops one cell short of it.
+    const band = drawBand(await snapshot($), prefs, Math.max(20, e.props.bodyColumns - 4), { Box, Text })
     // Claude Code draws nothing here itself; only another mod's tree is kept.
     const theirs = await next(e)
     return theirs && theirs.type !== 'engine' ? Box({ flexDirection: 'column', children: [band, theirs] }) : band
