@@ -57,7 +57,7 @@ claude --plugin-dir ./cc-status-band
 
 ```text
 /band aurora               主题：clay | paper | aurora | ink
-/band line                 形状：auto | chips | arrows | line
+/band band                 形状：auto | chips | band | arrows | line
 /band nerd                 字符集：unicode | nerd | ascii
 /band above                位置：below | above
 /band time clock           花费旁的时间：elapsed（会话时长）| clock（13:24）| clock12（01:24PM）| off
@@ -85,7 +85,7 @@ node ~/.claude/cc-status-band/scripts/install-statusline.mjs --theme clay
 | 参数 | 环境变量 | 取值 |
 | :- | :- | :- |
 | `--theme` | `STATUS_BAND_THEME` | `clay`（默认）、`paper`、`aurora`、`ink` |
-| `--shape` | `STATUS_BAND_SHAPE` | `auto`（主题默认）、`chips`、`arrows`、`line` |
+| `--shape` | `STATUS_BAND_SHAPE` | `auto`（主题默认）、`chips`、`band`、`arrows`、`line` |
 | `--glyphs` | `STATUS_BAND_GLYPHS` | `unicode`（默认）、`nerd`、`ascii` |
 | `--time` | `STATUS_BAND_TIME` | `elapsed`（默认）、`clock`、`clock12`、`off` |
 | `--hide` | `STATUS_BAND_HIDE` | 逗号分隔：`model,dir,git,ctx,5h,7d,spend,quota,cost` |
@@ -102,7 +102,7 @@ node ~/.claude/cc-status-band/scripts/install-statusline.mjs --theme clay
 | **Aurora** | 冷色、鲜艳的深色终端 | arrows |
 | **Ink** | 任何终端；只有彩色文字，没有底色 | line |
 
-有底色的主题可以搭配任意形状。选择 `nerd` 字符集时，**chips** 和 **arrows** 会用 [Nerd Font](https://www.nerdfonts.com) 字形画出圆角和箭头；默认的 `unicode` 字符集使用方角，任何字体都能显示。`ascii` 只用 ASCII 字符。
+有底色的主题可以搭配任意形状：**chips**（每段一个圆角块）、**band**（一个大圆角条包住所有段，段之间用 `│` 分隔）、**arrows**（powerline 箭头）或 **line**（无底色）。选择 `nerd` 字符集时，**chips** 和 **arrows** 会用 [Nerd Font](https://www.nerdfonts.com) 字形画出圆角和箭头；默认的 `unicode` 字符集使用方角，任何字体都能显示。`ascii` 只用 ASCII 字符。
 
 在自己的终端和字体下预览：
 

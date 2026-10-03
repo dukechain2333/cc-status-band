@@ -66,5 +66,6 @@ Full values live in [`core/themes.js`](../core/themes.js).
 ## Shapes
 
 - **Chips**: separate pills one cell apart. Rounded caps with the Nerd Font glyph set (`` ``), square ends otherwise.
+- **Band**: one pill around every segment, filled with tone `b`, segments split by a `│` in the theme's `divider` color. The model keeps the accent for `✻` and its pips.
 - **Arrows**: flush segments joined by powerline arrows (``) with Nerd Fonts, flush blocks otherwise.
 - **Line**: no fills, segments separated by a dim `│`.

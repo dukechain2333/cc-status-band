@@ -59,7 +59,7 @@ Run `/band` to open the picker. A digit picks a theme, a letter picks a shape, g
   3: Aurora    …
   4: Ink       …
 
-shape    d: theme default   c: chips   a: arrows   l: line
+shape    d: theme default   c: chips   a: arrows   l: line   w: one band
 glyphs   u: unicode   n: nerd font   p: plain ascii
 time     e: session time   k: clock 24h   h: clock 12h   o: off
 place    b: below prompt   t: above prompt
@@ -69,7 +69,7 @@ Or set things directly. Each word sets whatever it names:
 
 ```text
 /band aurora               theme: clay | paper | aurora | ink
-/band line                 shape: auto | chips | arrows | line
+/band band                 shape: auto | chips | band | arrows | line
 /band nerd                 glyphs: unicode | nerd | ascii
 /band above                place: below | above
 /band time clock           time beside the cost: elapsed | clock (13:24) | clock12 (01:24PM) | off
@@ -108,7 +108,7 @@ Flags (or environment variables):
 | Flag | Env | Values |
 | :- | :- | :- |
 | `--theme` | `STATUS_BAND_THEME` | `clay` (default), `paper`, `aurora`, `ink` |
-| `--shape` | `STATUS_BAND_SHAPE` | `auto` (the theme's own), `chips`, `arrows`, `line` |
+| `--shape` | `STATUS_BAND_SHAPE` | `auto` (the theme's own), `chips`, `band`, `arrows`, `line` |
 | `--glyphs` | `STATUS_BAND_GLYPHS` | `unicode` (default), `nerd`, `ascii` |
 | `--time` | `STATUS_BAND_TIME` | `elapsed` (default), `clock`, `clock12`, `off` |
 | `--hide` | `STATUS_BAND_HIDE` | comma list: `model,dir,git,ctx,5h,7d,spend,quota,cost` |
@@ -125,7 +125,7 @@ Undo with `node scripts/install-statusline.mjs --uninstall`.
 | **Aurora** | cool, vivid dark terminals | arrows |
 | **Ink** | anything; colored text, no fills | line |
 
-Any shape works with any filled theme. **Chips** and **arrows** draw rounded and pointed caps with [Nerd Font](https://www.nerdfonts.com) glyphs when you pick the `nerd` glyph set; with the default `unicode` set they have square ends, which every font can draw. `ascii` avoids everything outside ASCII.
+Any shape works with any filled theme: **chips** (a pill per segment), **band** (one pill around everything, segments split by `│`), **arrows** (powerline) or **line** (no fills). **Chips** and **arrows** draw rounded and pointed caps with [Nerd Font](https://www.nerdfonts.com) glyphs when you pick the `nerd` glyph set; with the default `unicode` set they have square ends, which every font can draw. `ascii` avoids everything outside ASCII.
 
 Preview them in your own terminal and font:
 

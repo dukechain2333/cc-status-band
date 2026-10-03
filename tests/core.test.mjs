@@ -94,7 +94,7 @@ test('the full band shows every segment at a wide width', () => {
 })
 
 test('the band folds to fit and never exceeds the width it was given', () => {
-  for (const shape of ['chips', 'arrows', 'line']) {
+  for (const shape of ['chips', 'arrows', 'line', 'band']) {
     for (const glyphs of ['unicode', 'nerd', 'ascii']) {
       for (const columns of [160, 120, 100, 84, 64, 56]) {
         const band = layoutBand(DEMOS.hot, { theme: 'clay', shape, glyphs }, columns)
@@ -161,6 +161,17 @@ test('hiding cost keeps the time', () => {
   assert.ok(text.includes('◷ 01:24PM'), text)
   const none = layoutBand(snap, { hide: ['cost'], time: 'off' }, 200)
   assert.ok(!none.segments.some((s) => s.id === 'cost'))
+})
+
+test('the band shape is one fill split by dividers', () => {
+  const band = layoutBand(DEMOS.steady, { theme: 'clay', shape: 'band', glyphs: 'nerd' }, 200)
+  const runs = paint(band)
+  const text = plain(runs)
+  assert.ok(text.startsWith('\uE0B6') && text.endsWith('\uE0B4'), text)
+  assert.equal(text.split(' │ ').length, band.segments.length)
+  const inside = runs.slice(1, -1)
+  assert.ok(inside.every((r) => r.bg === '#33302C'), 'one fill from cap to cap')
+  assert.equal(runs.find((r) => r.text === 'Opus 5.5').fg, '#E8E5DA')
 })
 
 test('the model stays legible on a bare row', () => {

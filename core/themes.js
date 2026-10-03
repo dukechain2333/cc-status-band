@@ -7,6 +7,8 @@
 // A palette has two chip tones, `a` and `b`, that alternate left to right so
 // neighbouring chips stay distinct, plus the model chip, which carries the
 // accent. `ok`, `warn` and `crit` color the gauges and the numbers beside them.
+// The one-band shape fills everything with tone `b` and splits segments with
+// `divider`.
 
 export const THEMES = {
   clay: {
@@ -23,6 +25,7 @@ export const THEMES = {
     crit: '#F0715A',
     track: '#524D45',
     sep: '#4A4640',
+    divider: '#5E5951',
   },
   paper: {
     label: 'Paper',
@@ -38,6 +41,7 @@ export const THEMES = {
     crit: '#B23A27',
     track: '#C9C3B5',
     sep: '#C9C3B5',
+    divider: '#BDB7A9',
   },
   aurora: {
     label: 'Aurora',
@@ -53,6 +57,7 @@ export const THEMES = {
     crit: '#FF6B8B',
     track: '#3B4570',
     sep: '#343D63',
+    divider: '#4A5585',
   },
   ink: {
     label: 'Ink',
@@ -68,15 +73,16 @@ export const THEMES = {
     crit: '#E06C5A',
     track: '#3A3A3A',
     sep: '#3A3A3A',
+    divider: '#3A3A3A',
   },
 }
 
 export const THEME_NAMES = Object.keys(THEMES)
 
 // `auto` means "the theme's own shape".
-export const SHAPES = ['auto', 'chips', 'arrows', 'line']
+export const SHAPES = ['auto', 'chips', 'arrows', 'line', 'band']
 
-// Chips and arrows draw their rounded and pointed caps with Nerd Font glyphs
+// Chips, the band and arrows draw their rounded and pointed caps with Nerd Font glyphs
 // from the Private Use Area. Without a Nerd Font those render as boxes, so the
 // unicode and ascii sets leave the caps out and the chips get square ends.
 export const GLYPHS = {

@@ -194,6 +194,7 @@ function chromeWidth(shape, g, n) {
   if (n === 0) return 0
   if (shape === 'line') return (n - 1) * 3
   if (shape === 'chips') return n * (2 + (g.capLeft ? 2 : 0)) + (n - 1)
+  if (shape === 'band') return (n - 1) * 3 + 2 + (g.capLeft ? 2 : 0)
   return n * (2 + (g.arrow ? 1 : 0))
 }
 
@@ -240,11 +241,19 @@ export function paint(band) {
   const { segments, theme: T, shape, glyphs: g } = band
   // On a bare row the model chip's on-accent colors would vanish into the
   // terminal, so it borrows the plain tone and keeps the accent for its marks.
+  // The one-band shape does the same inside its single fill.
   const bareModel = { bg: null, fg: T.a.fg, muted: T.a.muted, icon: T.accent, pip: T.accent, pipOff: T.track }
-  const toneOf = (seg, i) =>
-    seg.id === 'model' ? (shape === 'line' && T.model.bg ? bareModel : T.model) : i % 2 === 1 ? T.a : T.b
+  const single = shape === 'band'
+  const toneOf = (seg, i) => {
+    if (single) return seg.id === 'model' ? { ...bareModel, bg: T.b.bg } : T.b
+    return seg.id === 'model' ? (shape === 'line' && T.model.bg ? bareModel : T.model) : i % 2 === 1 ? T.a : T.b
+  }
   const bgOf = (i) => (shape === 'line' || !segments[i] ? null : toneOf(segments[i], i).bg)
   const runs = []
+  if (single && segments.length) {
+    if (g.capLeft) runs.push({ text: g.capLeft, fg: T.b.bg, bg: null })
+    runs.push({ text: ' ', fg: T.b.fg, bg: T.b.bg })
+  }
   segments.forEach((seg, i) => {
     const tone = toneOf(seg, i)
     const bg = bgOf(i)
@@ -262,9 +271,10 @@ export function paint(band) {
       })[role] || tone.fg
 
     if (shape === 'line' && i > 0) runs.push({ text: ` ${g.sep} `, fg: T.sep, bg: null })
+    if (single && i > 0) runs.push({ text: ` ${g.sep} `, fg: T.divider, bg })
     if (shape === 'chips' && i > 0) runs.push({ text: ' ', fg: null, bg: null })
     if (shape === 'chips' && g.capLeft) runs.push({ text: g.capLeft, fg: bg, bg: null })
-    if (bg) runs.push({ text: ' ', fg: tone.fg, bg })
+    if (bg && !single) runs.push({ text: ' ', fg: tone.fg, bg })
     for (const item of seg.items) {
       if (item.bar != null) {
         const { filled, empty } = barText(item, g)
@@ -274,10 +284,14 @@ export function paint(band) {
         runs.push({ text: item.text, fg: color(item.role), bg, bold: item.bold })
       }
     }
-    if (bg) runs.push({ text: ' ', fg: tone.fg, bg })
+    if (bg && !single) runs.push({ text: ' ', fg: tone.fg, bg })
     if (shape === 'chips' && g.capRight) runs.push({ text: g.capRight, fg: bg, bg: null })
     if (shape === 'arrows' && g.arrow) runs.push({ text: g.arrow, fg: bg, bg: bgOf(i + 1) })
   })
+  if (single && segments.length) {
+    runs.push({ text: ' ', fg: T.b.fg, bg: T.b.bg })
+    if (g.capRight) runs.push({ text: g.capRight, fg: T.b.bg, bg: null })
+  }
   return mergeRuns(runs)
 }
 

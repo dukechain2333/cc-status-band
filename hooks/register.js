@@ -290,6 +290,7 @@ export function register(on) {
           ['chips', 'chips', 'c'],
           ['arrows', 'arrows', 'a'],
           ['line', 'line', 'l'],
+          ['band', 'one band', 'w'],
         ]),
         optionRow('glyphs', 'glyphs', [
           ['unicode', 'unicode', 'u'],
