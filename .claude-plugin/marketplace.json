@@ -1,0 +1,12 @@
+{
+  "name": "cc-status-band",
+  "owner": { "name": "William Qian", "url": "https://github.com/dukechain2333" },
+  "metadata": { "description": "Status Band, a Claude Code mod that draws a designed status line under the prompt." },
+  "plugins": [
+    {
+      "name": "status-band",
+      "source": "./",
+      "description": "A designed status band under the prompt: model and effort, directory, git, a context gauge, the quota you have left, and cost."
+    }
+  ]
+}

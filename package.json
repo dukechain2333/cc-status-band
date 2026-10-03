@@ -1,0 +1,34 @@
+{
+  "name": "cc-status-band",
+  "version": "0.1.0",
+  "description": "A designed status band for Claude Code: model and effort, directory, git, context gauge, quota left and cost. Ships as a mod and as a classic statusLine command.",
+  "type": "module",
+  "license": "MIT",
+  "author": "William Qian (https://github.com/dukechain2333)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dukechain2333/cc-status-band.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "status-band": "statusline/status-band.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/core.test.mjs && claude plugin test",
+    "test:core": "node --test tests/core.test.mjs",
+    "test:mod": "claude plugin test",
+    "validate": "claude plugin validate .claude-plugin/plugin.json && claude plugin validate .",
+    "preview": "node scripts/preview.mjs",
+    "docs": "node scripts/render-svg.mjs"
+  },
+  "keywords": [
+    "claude-code",
+    "statusline",
+    "status-bar",
+    "mod",
+    "plugin",
+    "theme"
+  ]
+}

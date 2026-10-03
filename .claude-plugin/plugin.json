@@ -1,0 +1,11 @@
+{
+  "name": "status-band",
+  "displayName": "Status Band",
+  "version": "0.1.0",
+  "description": "A designed status band under the prompt: model and effort, directory, git, a context gauge, the 5-hour and weekly quota you have left, and cost.",
+  "author": { "name": "William Qian", "url": "https://github.com/dukechain2333" },
+  "homepage": "https://github.com/dukechain2333/cc-status-band",
+  "repository": "https://github.com/dukechain2333/cc-status-band",
+  "license": "MIT",
+  "keywords": ["statusline", "status-bar", "quota", "context", "theme", "mod"]
+}
