@@ -1,6 +1,6 @@
 # Status Band
 
-为 [Claude Code](https://code.claude.com) 设计的状态栏。在输入框下方安静地占一行，显示：模型与推理强度、当前目录、git 状态、上下文窗口占用、5 小时与每周额度的**剩余**比例，以及本次会话的花费。
+为 [Claude Code](https://code.claude.com) 设计的状态栏。一条撑满终端宽度的大圆角条，位于输入框上方，显示：用户与主机、模型与推理强度、当前目录、git 状态、上下文窗口占用、5 小时与每周额度的**剩余**比例，以及时间或本次花费。一行放不下时会扩展成两行：上面是“你在哪”，下面是“用了多少”。
 
 [English](README.md)
 
@@ -15,6 +15,7 @@
 
 | 段 | 示例 | 说明 |
 | :- | :- | :- |
+| 用户 · 主机 | `william@macbook` | `$USER` 和短主机名。 |
 | 模型 · 推理强度 | `✻ Opus 5.5 ●●●●○` | 五个点对应 `low` … `max`，随 `/effort` 实时变化；模型不支持 effort 时隐藏。 |
 | 目录 | `~/code/cc-status-band` | 空间不够时依次缩写为 `~/c/cc-status-band`、只显示文件夹名。 |
 | Git | `⎇ main +2 ~3 ↑1` | 已暂存、未暂存/未跟踪、领先/落后。窄时折叠成 `⎇ main ●`。 |
@@ -25,9 +26,9 @@
 
 ![各种状态](docs/states.svg)
 
-状态栏会测量可用宽度，逐级折叠细节直到放得下，永远不会换行：
+状态栏会撑满终端宽度。一行放得下时，用量信息靠右；放不下就扩展成第二行，只有仍然溢出的那一行才会折叠细节：
 
-![170、130、100、72 列下的同一会话](docs/widths.svg)
+![190、140、100、72 列下的同一会话](docs/widths.svg)
 
 ## 安装 mod
 
@@ -38,9 +39,9 @@
 /plugin install status-band@cc-status-band
 ```
 
-下一个会话（或执行 `/reload-plugins` 后）状态栏就会出现在输入框下方。
+下一个会话（或执行 `/reload-plugins` 后）状态栏就会出现在输入框上方。
 
-如果 settings 里还配置了 `statusLine` 命令，会看到两条状态栏。可以从 `~/.claude/settings.json` 删掉 `statusLine`，或者用 `/band above` 把状态栏移到输入框上方。
+如果 settings 里还配置了 `statusLine` 命令，它仍会显示在输入框下方。只想要这条状态栏的话，从 `~/.claude/settings.json` 删掉 `statusLine`。
 
 不安装、直接试用：
 
@@ -59,10 +60,12 @@ claude --plugin-dir ./cc-status-band
 /band aurora               主题：clay | paper | aurora | ink
 /band band                 形状：auto | chips | band | arrows | line
 /band nerd                 字符集：unicode | nerd | ascii
-/band above                位置：below | above
+/band below                位置：above（默认）| below
+/band rows 1               行数：2（默认，一行放不下时分两行）| 1
+/band fit                  宽度：full（默认，撑满终端）| fit
 /band time clock           花费旁的时间：elapsed（会话时长）| clock（13:24）| clock12（01:24PM）| off
 /band gap 1                状态栏与上方那行之间空几行：0 | 1（默认）| 2
-/band hide cost git        隐藏段：model dir git ctx 5h 7d spend cost（quota = 所有额度窗口）
+/band hide cost git        隐藏段：host model dir git ctx 5h 7d spend cost（quota = 所有额度窗口）
 /band show cost
 /band hint off             不再在状态栏下方保留 Claude Code 自带的提示行
 /band reset
@@ -88,7 +91,9 @@ node ~/.claude/cc-status-band/scripts/install-statusline.mjs --theme clay
 | `--shape` | `STATUS_BAND_SHAPE` | `auto`（主题默认）、`chips`、`band`、`arrows`、`line` |
 | `--glyphs` | `STATUS_BAND_GLYPHS` | `unicode`（默认）、`nerd`、`ascii` |
 | `--time` | `STATUS_BAND_TIME` | `elapsed`（默认）、`clock`、`clock12`、`off` |
-| `--hide` | `STATUS_BAND_HIDE` | 逗号分隔：`model,dir,git,ctx,5h,7d,spend,quota,cost` |
+| `--rows` | `STATUS_BAND_ROWS` | `2`（默认）或 `1` |
+| `--width` | `STATUS_BAND_WIDTH` | `full`（默认）或 `fit` |
+| `--hide` | `STATUS_BAND_HIDE` | 逗号分隔：`host,model,dir,git,ctx,5h,7d,spend,quota,cost` |
 | `--colors` | `STATUS_BAND_COLORS` | `truecolor` 或 `256`（默认根据 `COLORTERM`/`TERM_PROGRAM` 自动判断） |
 
 卸载：`node scripts/install-statusline.mjs --uninstall`。
@@ -97,8 +102,8 @@ node ~/.claude/cc-status-band/scripts/install-statusline.mjs --theme clay
 
 | 主题 | 适合 | 默认形状 |
 | :- | :- | :- |
-| **Clay** | 暖色深色终端 | chips |
-| **Paper** | 浅色终端 | chips |
+| **Clay** | 暖色深色终端 | band |
+| **Paper** | 浅色终端 | band |
 | **Aurora** | 冷色、鲜艳的深色终端 | arrows |
 | **Ink** | 任何终端；只有彩色文字，没有底色 | line |
 

@@ -26,6 +26,11 @@ function colorCode(hex, layer, mode) {
   return `${layer === 'fg' ? 38 : 48};2;${r};${g};${b}`
 }
 
+// One line per row of runs.
+export function rowsToAnsi(rows, mode = 'truecolor') {
+  return rows.map((runs) => toAnsi(runs, mode)).join('\n')
+}
+
 // mode: 'truecolor' | '256'
 export function toAnsi(runs, mode = 'truecolor') {
   let out = ''

@@ -13,8 +13,20 @@ import { GLYPH_NAMES, SHAPES, THEMES, THEME_NAMES } from '../core/themes.js'
 
 const PANE = 'status-band'
 const PLACES = ['below', 'above']
-const DEFAULTS = { theme: 'clay', shape: 'auto', glyphs: 'unicode', place: 'below', time: 'elapsed', gap: 1, hide: [], hint: true }
+const DEFAULTS = {
+  theme: 'clay',
+  shape: 'auto',
+  glyphs: 'unicode',
+  place: 'above',
+  time: 'elapsed',
+  rows: 2,
+  width: 'full',
+  gap: 1,
+  hide: [],
+  hint: true,
+}
 const GAPS = [0, 1, 2]
+const WIDTHS = ['full', 'fit']
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max']
 
 // What the band shows between redraws. Preferences live in $.store so every
@@ -23,6 +35,8 @@ let prefs = { ...DEFAULTS }
 let git = null
 let effort = null
 let home = ''
+let user = ''
+let host = ''
 
 function cleanPrefs(saved) {
   const p = { ...DEFAULTS, ...(saved && typeof saved === 'object' ? saved : {}) }
@@ -34,11 +48,13 @@ function cleanPrefs(saved) {
   p.hide = Array.isArray(p.hide) ? p.hide.filter((id) => HIDEABLE.includes(id)) : []
   p.hint = p.hint !== false
   if (!GAPS.includes(p.gap)) p.gap = DEFAULTS.gap
+  if (p.rows !== 1 && p.rows !== 2) p.rows = DEFAULTS.rows
+  if (!WIDTHS.includes(p.width)) p.width = DEFAULTS.width
   return p
 }
 
 function describePrefs(p) {
-  const parts = [`theme ${p.theme}`, `shape ${p.shape}`, `glyphs ${p.glyphs}`, `time ${p.time}`, `gap ${p.gap}`, `${p.place} the prompt`]
+  const parts = [`theme ${p.theme}`, `shape ${p.shape}`, `glyphs ${p.glyphs}`, `time ${p.time}`, `rows ${p.rows}`, `width ${p.width}`, `gap ${p.gap}`, `${p.place} the prompt`]
   if (p.hide.length) parts.push(`hiding ${p.hide.join(', ')}`)
   if (!p.hint) parts.push("Claude Code's hint line off")
   return parts.join(' · ')
@@ -59,6 +75,8 @@ function applyArgs(p, args) {
     else if (w === 'time' && TIME_MODES.includes(words[i + 1])) next.time = words[(i += 1)]
     else if (TIME_MODES.includes(w)) next.time = w
     else if (w === 'gap' && GAPS.includes(Number(words[i + 1]))) next.gap = Number(words[(i += 1)])
+    else if (w === 'rows' && ['1', '2'].includes(words[i + 1])) next.rows = Number(words[(i += 1)])
+    else if (WIDTHS.includes(w)) next.width = w
     else if (w === 'hint') {
       next.hint = words[i + 1] !== 'off'
       if (words[i + 1] === 'on' || words[i + 1] === 'off') i += 1
@@ -68,7 +86,7 @@ function applyArgs(p, args) {
       next.hide = w === 'hide' ? [...new Set([...next.hide, ...ids])] : next.hide.filter((id) => !ids.includes(id))
       i = words.length
     } else {
-      return `Unknown option "${w}". Themes: ${THEME_NAMES.join(', ')}; shapes: ${SHAPES.join(', ')}; glyphs: ${GLYPH_NAMES.join(', ')}; place: below, above; time: ${TIME_MODES.join(', ')}; gap 0|1|2; hide/show <segment>; hint on|off; reset.`
+      return `Unknown option "${w}". Themes: ${THEME_NAMES.join(', ')}; shapes: ${SHAPES.join(', ')}; glyphs: ${GLYPH_NAMES.join(', ')}; place: below, above; time: ${TIME_MODES.join(', ')}; rows 1|2; full|fit; gap 0|1|2; hide/show <segment>; hint on|off; reset.`
     }
   }
   return next
@@ -127,17 +145,27 @@ async function snapshot($) {
     $.session.usage(),
     $.clock.now(),
   ])
-  return fromSession({ modelId, effort, cwd, home, usage, git, now })
+  return fromSession({ modelId, effort, cwd, home, usage, git, now, user, host })
 }
 
-function drawBand(snap, options, columns, Text) {
-  return toElements(paint(layoutBand(snap, options, columns)), { Text })
+function drawBand(snap, options, columns, elements) {
+  return toElements(paint(layoutBand(snap, options, columns)), elements)
+}
+
+async function readHost($) {
+  try {
+    const r = await $.process.run(['hostname', '-s'], { timeoutMs: 2000 })
+    if (r.exitCode === 0 && r.stdout.trim()) return r.stdout.trim()
+  } catch {}
+  return (await $.env.get('COMPUTERNAME')) || ''
 }
 
 export function register(on) {
   on('session.start', async ($, e, next) => {
     await loadPrefs($)
     home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''
+    user = (await $.env.get('USER')) || (await $.env.get('USERNAME')) || ''
+    host = await readHost($)
     const settings = await readSettings($)
     await refreshGit($)
 
@@ -158,7 +186,7 @@ export function register(on) {
       await $.command.register({
         name: 'band',
         description: 'Pick the status band theme, shape and place',
-        argumentHint: '[theme | shape | glyphs | above | below | time <mode> | gap <rows> | hide <segment> | show <segment> | reset]',
+        argumentHint: '[theme | shape | glyphs | above | below | time <mode> | rows 1|2 | full | fit | gap <rows> | hide <segment> | show <segment> | reset]',
         immediate: true,
       })
     } catch {}
@@ -196,8 +224,8 @@ export function register(on) {
   on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
     if (prefs.place !== 'below' || e.surface !== 'terminal') return next(e)
     const { Box, Text } = $.ui.resolve(e)
-    const columns = Math.max(20, ((e.viewport && e.viewport.columns) || 100) - 4)
-    const children = [drawBand(await snapshot($), prefs, columns, Text)]
+    const columns = Math.max(20, ((e.viewport && e.viewport.columns) || 100) - 2)
+    const children = [drawBand(await snapshot($), prefs, columns, { Box, Text })]
     if (prefs.hint && e.props.hint) children.push(await next(e))
     return Box({ flexDirection: 'column', marginTop: prefs.gap, children })
   })
@@ -206,7 +234,7 @@ export function register(on) {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (prefs.place !== 'above' || e.props.hasSurvey || e.surface !== 'terminal') return next(e)
     const { Box, Text } = $.ui.resolve(e)
-    const band = drawBand(await snapshot($), prefs, Math.max(20, e.props.bodyColumns - 2), Text)
+    const band = drawBand(await snapshot($), prefs, Math.max(20, e.props.bodyColumns - 1), { Box, Text })
     // Claude Code draws nothing here itself; only another mod's tree is kept.
     const theirs = await next(e)
     return theirs && theirs.type !== 'engine' ? Box({ flexDirection: 'column', children: [band, theirs] }) : band
@@ -255,7 +283,7 @@ export function register(on) {
               }),
             ],
           }),
-          drawBand(snap, { ...prefs, theme: name }, previewColumns, Text),
+          drawBand(snap, { ...prefs, theme: name, rows: 1, width: 'fit' }, previewColumns, { Box, Text }),
         ],
       })
     })
@@ -291,6 +319,14 @@ export function register(on) {
           ['arrows', 'arrows', 'a'],
           ['line', 'line', 'l'],
           ['band', 'one band', 'w'],
+        ]),
+        optionRow('width', 'width', [
+          ['full', 'full width', 'f'],
+          ['fit', 'fit content', 'i'],
+        ]),
+        optionRow('rows', 'rows', [
+          [2, 'up to two', 'm'],
+          [1, 'one row', 's'],
         ]),
         optionRow('glyphs', 'glyphs', [
           ['unicode', 'unicode', 'u'],

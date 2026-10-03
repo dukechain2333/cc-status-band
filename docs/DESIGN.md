@@ -4,18 +4,23 @@ The band was laid out on a Claude Design canvas before any code was written: an 
 
 ## Principles
 
-- **One row, always.** The band folds detail away rather than wrapping or growing a second line.
+- **At most two rows, never wrapped.** One row when everything fits; otherwise where-you-are and how-much-is-left each get a row. Detail folds away only in a row that still overflows.
 - **Color carries urgency; layout doesn't move.** A segment never changes position because a number crossed a threshold. Only its color does.
 - **Remaining, not spent.** Quota is shown as what is left, with a bar that drains, because that is the number you act on.
 - **Quiet by default.** Labels (`ctx`, `5h`, `left`) and secondary numbers use the muted tone; the figures that matter are bold.
 
 ## Anatomy
 
-Left to right, in the order you glance at them:
+Two groups, left to right. On one row the usage group sits at the right end, with the band's fill between them; on two rows each group has its own row.
 
+Where you are:
+
+0. **User · host.** `william@macbook`.
 1. **Model · effort.** The accent chip. `✻` marks Claude, five pips mark effort (`low` 1 … `max` 5).
 2. **Directory.** `~`-relative and bold.
 3. **Git.** Branch, then `+staged ~changed ↑ahead ↓behind`.
+How much you have used:
+
 4. **Context.** A ten-cell gauge (`━` filled, `─` track, `╸` for half a cell), percent used, tokens over window.
 5. **5-hour quota left.** Its own chip: an eight-cell gauge that drains, the percent, `left`, and a `↻` countdown.
 6. **Weekly quota left.** The same chip for the 7-day window. A gateway spend limit gets a third.
@@ -39,7 +44,7 @@ Each step trims one segment. The band stops at the first step that fits.
 3. Cost drops the time
 4. Git collapses to branch and a dirty dot
 5. Directory abbreviates parents (`~/c/cc-status-band`)
-6. Cost hides, unless the session is billed by API key
+6. Cost hides, unless the session is billed by API key, then user@host hides
 7. Quota windows become numbers (weekly first); a low window keeps its countdown
 8. Git hides
 9. Context becomes a number
@@ -66,6 +71,6 @@ Full values live in [`core/themes.js`](../core/themes.js).
 ## Shapes
 
 - **Chips**: separate pills one cell apart. Rounded caps with the Nerd Font glyph set (`` ``), square ends otherwise.
-- **Band**: one pill around every segment, filled with tone `b`, segments split by a `│` in the theme's `divider` color. The model keeps the accent for `✻` and its pips.
+- **Band** (default for Clay and Paper): one pill around every segment, filled with tone `b`, segments split by a `│` in the theme's `divider` color, stretched to the terminal's width. The model keeps the accent for `✻` and its pips.
 - **Arrows**: flush segments joined by powerline arrows (``) with Nerd Fonts, flush blocks otherwise.
 - **Line**: no fills, segments separated by a dim `│`.

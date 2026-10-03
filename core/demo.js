@@ -7,6 +7,8 @@ const HOUR = 60 * MIN
 const DAY = 24 * HOUR
 
 const base = {
+  user: 'you',
+  host: 'macbook',
   model: 'Opus 5.5',
   effort: 'xhigh',
   cwd: '/Users/you/code/cc-status-band',

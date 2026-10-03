@@ -9,7 +9,8 @@ function span(Text, run) {
   return Text(props)
 }
 
-// One row that never wraps: whatever doesn't fit is cut at the end.
-export function toElements(runs, { Text }) {
-  return Text({ wrap: 'truncate-end', children: runs.map((run) => span(Text, run)) })
+// One Text per row; a row never wraps, and whatever doesn't fit is cut at the end.
+export function toElements(rows, { Box, Text }) {
+  const lines = rows.map((runs) => Text({ wrap: 'truncate-end', children: runs.map((run) => span(Text, run)) }))
+  return lines.length === 1 ? lines[0] : Box({ flexDirection: 'column', children: lines })
 }

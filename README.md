@@ -1,6 +1,6 @@
 # Status Band
 
-A designed status line for [Claude Code](https://code.claude.com). One quiet row under the prompt that shows the model and its effort, where you are, git, how full the context window is, how much of your 5-hour and weekly quota is **left**, and what the session has cost.
+A designed status band for [Claude Code](https://code.claude.com). One full-width band above the prompt that shows who and where you are, the model and its effort, git, how full the context window is, how much of your 5-hour and weekly quota is **left**, and the time or what the session has cost. When one row isn't enough it grows to two: where you are on top, what you've used below.
 
 [中文说明](README.zh-CN.md)
 
@@ -15,6 +15,7 @@ It ships two ways from one codebase:
 
 | Segment | Example | Notes |
 | :- | :- | :- |
+| User · host | `william@macbook` | `$USER` and the short hostname. |
 | Model · effort | `✻ Opus 5.5 ●●●●○` | Five pips for `low` … `max`; follows `/effort` live. Hidden for models without an effort setting. |
 | Directory | `~/code/cc-status-band` | Abbreviates to `~/c/cc-status-band`, then the folder name, as space runs out. |
 | Git | `⎇ main +2 ~3 ↑1` | Staged, unstaged/untracked, ahead/behind. Folds to `⎇ main ●` when narrow. |
@@ -25,9 +26,9 @@ It ships two ways from one codebase:
 
 ![States: fresh, steady, warm, hot, API key](docs/states.svg)
 
-The band measures its row and folds detail away until it fits, so it never wraps:
+The band stretches across the terminal. When everything fits on one row, usage sits at the right end; otherwise the band takes a second row, and only a row that still overflows folds its detail:
 
-![The same session at 170, 130, 100 and 72 columns](docs/widths.svg)
+![The same session at 190, 140, 100 and 72 columns](docs/widths.svg)
 
 ## Install the mod
 
@@ -38,9 +39,9 @@ Requires Claude Code **2.1.287+** (`claude --version`).
 /plugin install status-band@cc-status-band
 ```
 
-The band appears under the prompt in your next session (or after `/reload-plugins`).
+The band appears above the prompt in your next session (or after `/reload-plugins`).
 
-If you also have a `statusLine` command in your settings you will see two bars. Remove `statusLine` from `~/.claude/settings.json`, or move the band above the prompt with `/band above`.
+If you also have a `statusLine` command in your settings, that one still draws under the prompt. Remove `statusLine` from `~/.claude/settings.json` if you only want the band.
 
 To try it without installing, clone the repo and start a session with it loaded:
 
@@ -71,10 +72,12 @@ Or set things directly. Each word sets whatever it names:
 /band aurora               theme: clay | paper | aurora | ink
 /band band                 shape: auto | chips | band | arrows | line
 /band nerd                 glyphs: unicode | nerd | ascii
-/band above                place: below | above
+/band below                place: above (default) | below
+/band rows 1               rows: 2 (default; splits when one row is too narrow) | 1
+/band fit                  width: full (default; the band spans the terminal) | fit
 /band time clock           time beside the cost: elapsed | clock (13:24) | clock12 (01:24PM) | off
 /band gap 1                blank rows between the band and the footer line above it: 0 | 1 (default) | 2
-/band hide cost git        hide: model dir git ctx 5h 7d spend cost (quota = all windows)
+/band hide cost git        hide: host model dir git ctx 5h 7d spend cost (quota = all windows)
 /band show cost
 /band hint off             drop Claude Code's own hint line under the band
 /band reset
@@ -111,7 +114,9 @@ Flags (or environment variables):
 | `--shape` | `STATUS_BAND_SHAPE` | `auto` (the theme's own), `chips`, `band`, `arrows`, `line` |
 | `--glyphs` | `STATUS_BAND_GLYPHS` | `unicode` (default), `nerd`, `ascii` |
 | `--time` | `STATUS_BAND_TIME` | `elapsed` (default), `clock`, `clock12`, `off` |
-| `--hide` | `STATUS_BAND_HIDE` | comma list: `model,dir,git,ctx,5h,7d,spend,quota,cost` |
+| `--rows` | `STATUS_BAND_ROWS` | `2` (default) or `1` |
+| `--width` | `STATUS_BAND_WIDTH` | `full` (default) or `fit` |
+| `--hide` | `STATUS_BAND_HIDE` | comma list: `host,model,dir,git,ctx,5h,7d,spend,quota,cost` |
 | `--colors` | `STATUS_BAND_COLORS` | `truecolor` or `256` (detected from `COLORTERM`/`TERM_PROGRAM` by default) |
 
 Undo with `node scripts/install-statusline.mjs --uninstall`.
@@ -120,8 +125,8 @@ Undo with `node scripts/install-statusline.mjs --uninstall`.
 
 | Theme | For | Default shape |
 | :- | :- | :- |
-| **Clay** | warm dark terminals | chips |
-| **Paper** | light terminals | chips |
+| **Clay** | warm dark terminals | band |
+| **Paper** | light terminals | band |
 | **Aurora** | cool, vivid dark terminals | arrows |
 | **Ink** | anything; colored text, no fills | line |
 
@@ -148,7 +153,7 @@ hooks/register.js        the mod: gathers figures via the mods API, draws, runs 
 statusline/status-band.mjs  the classic statusLine command
 ```
 
-The mod reads the model, working directory and usage (`context`, `rateLimits`, `cost`) from `$.session`, takes the live effort from each `turn.step`, runs `git status --porcelain=v2` through `$.process.run` after each turn and every 20 seconds, and redraws on `session.measure`. It draws in the `PromptHint` render site (the line under the prompt) and keeps Claude Code's own hint line beneath it, or in the `AbovePrompt` band if you choose `above`.
+The mod reads the user, host, model, working directory and usage (`context`, `rateLimits`, `cost`) from `$.session`, takes the live effort from each `turn.step`, runs `git status --porcelain=v2` through `$.process.run` after each turn and every 20 seconds, and redraws on `session.measure`. It draws in the `AbovePrompt` render site, the band directly above the prompt, or in the `PromptHint` site under the prompt if you choose `below`, where it keeps Claude Code's own hint line beneath it.
 
 ## Develop
 

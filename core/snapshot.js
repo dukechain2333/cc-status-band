@@ -11,12 +11,14 @@ function window(usedPercent, resetsAt) {
 }
 
 // The JSON Claude Code pipes to a statusLine command.
-export function fromStatusLine(input, { home, now, git } = {}) {
+export function fromStatusLine(input, { home, now, git, user, host } = {}) {
   const i = input || {}
   const ctx = i.context_window || {}
   const rl = i.rate_limits || {}
   const sec = (v) => (num(v) == null ? null : v * 1000)
   return {
+    user: user || '',
+    host: host || '',
     model: modelName(i.model && i.model.id, i.model && i.model.display_name),
     effort: (i.effort && i.effort.level) || null,
     cwd: (i.workspace && i.workspace.current_dir) || i.cwd || '',
@@ -39,7 +41,7 @@ export function fromStatusLine(input, { home, now, git } = {}) {
 }
 
 // What a mod reads through $.session: model(), cwd() and usage().
-export function fromSession({ modelId, effort, cwd, home, usage, git, now }) {
+export function fromSession({ modelId, effort, cwd, home, usage, git, now, user, host }) {
   const u = usage || {}
   const ctx = u.context || {}
   const limits = { five: null, seven: null, spend: null }
@@ -49,6 +51,8 @@ export function fromSession({ modelId, effort, cwd, home, usage, git, now }) {
   }
   const t = now || Date.now()
   return {
+    user: user || '',
+    host: host || '',
     model: modelName(modelId),
     effort: typeof effort === 'string' ? effort : null,
     cwd: cwd || '',

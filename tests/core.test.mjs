@@ -10,7 +10,8 @@ import { formatClock, formatPath, formatResetIn, formatTokens, modelName, textWi
 import { parseGitStatus } from '../core/git.js'
 import { fromSession, fromStatusLine } from '../core/snapshot.js'
 
-const plain = (runs) => runs.map((r) => r.text).join('')
+// Rows of runs → their text, one line per row.
+const plain = (rows) => rows.map((row) => row.map((r) => r.text).join('')).join('\n')
 
 test('model ids become short names', () => {
   assert.equal(modelName('claude-opus-5-5'), 'Opus 5.5')
@@ -85,29 +86,66 @@ test('the full band shows every segment at a wide width', () => {
   const band = layoutBand(DEMOS.steady, { theme: 'clay' }, 200)
   assert.deepEqual(
     band.segments.map((s) => s.id),
-    ['model', 'dir', 'git', 'ctx', '5h', '7d', 'cost'],
+    ['host', 'model', 'dir', 'git', 'ctx', '5h', '7d', 'cost'],
   )
   const text = plain(paint(band))
-  for (const part of ['Opus 5.5', '●●●●○', '~/code/cc-status-band', 'main +2 ~3 ↑1', '42%', '84k/200k', '72% left ↻2h14m', '59% left ↻3d', '$1.42', '23m']) {
+  for (const part of ['you@macbook', 'Opus 5.5', '●●●●○', '~/code/cc-status-band', 'main +2 ~3 ↑1', '42%', '84k/200k', '72% left ↻2h14m', '59% left ↻3d', '$1.42', '23m']) {
     assert.ok(text.includes(part), `missing ${part} in ${text}`)
   }
 })
 
-test('the band folds to fit and never exceeds the width it was given', () => {
+test('every row fits the width it was given, and a stretched band fills it', () => {
   for (const shape of ['chips', 'arrows', 'line', 'band']) {
     for (const glyphs of ['unicode', 'nerd', 'ascii']) {
-      for (const columns of [160, 120, 100, 84, 64, 56]) {
-        const band = layoutBand(DEMOS.hot, { theme: 'clay', shape, glyphs }, columns)
-        const width = textWidth(plain(paint(band)))
-        assert.equal(width, measure(band.segments, band.shape, band.glyphs), `${shape}/${glyphs}/${columns}`)
-        if (columns >= 56) assert.ok(width <= columns, `${shape}/${glyphs} at ${columns} is ${width} wide`)
+      for (const rows of [1, 2]) {
+        for (const columns of [200, 160, 120, 100, 84, 64, 56]) {
+          const band = layoutBand(DEMOS.hot, { theme: 'clay', shape, glyphs, rows }, columns)
+          const label = `${shape}/${glyphs}/${rows} rows at ${columns}`
+          assert.ok(band.rows.length <= rows, label)
+          paint(band).forEach((runs, r) => {
+            const width = textWidth(runs.map((run) => run.text).join(''))
+            if (band.fill) assert.equal(width, columns, label)
+            else assert.equal(width, measure(band.rows[r], band.shape, band.glyphs), label)
+            assert.ok(width <= columns, `${label}: row ${r} is ${width} wide`)
+          })
+        }
       }
     }
   }
 })
 
+test('a wide terminal gets one row, usage pushed to the right end', () => {
+  const band = layoutBand(DEMOS.steady, { theme: 'clay' }, 200)
+  assert.equal(band.rows.length, 1)
+  const text = plain(paint(band))
+  assert.equal(textWidth(text), 200)
+  assert.match(text, /main \+2 ~3 ↑1 {4,}ctx/)
+})
+
+test('a narrower terminal splits where-you-are from how-much-is-left', () => {
+  const band = layoutBand(DEMOS.steady, { theme: 'clay' }, 150)
+  assert.deepEqual(
+    band.rows.map((row) => row.map((seg) => seg.id)),
+    [
+      ['host', 'model', 'dir', 'git'],
+      ['ctx', '5h', '7d', 'cost'],
+    ],
+  )
+  const lines = plain(paint(band)).split('\n')
+  assert.ok(lines.every((line) => textWidth(line) === 150))
+  assert.ok(lines[1].includes('84k/200k'), 'two rows keep the detail one row would fold')
+})
+
+test('rows 1 keeps one folded row; fit keeps the band at its content width', () => {
+  const one = layoutBand(DEMOS.steady, { theme: 'clay', rows: 1 }, 150)
+  assert.equal(one.rows.length, 1)
+  assert.ok(!plain(paint(one)).includes('84k'))
+  const fit = layoutBand(DEMOS.steady, { theme: 'clay', width: 'fit' }, 220)
+  assert.ok(textWidth(plain(paint(fit))) < 220)
+})
+
 test('folding drops detail before segments', () => {
-  const at = (cols) => plain(renderRuns(DEMOS.steady, { theme: 'clay' }, cols))
+  const at = (cols) => plain(renderRuns(DEMOS.steady, { theme: 'clay', rows: 1, width: 'fit' }, cols))
   assert.ok(at(112).includes('84k') === false)
   assert.ok(at(84).includes('~/c/cc-status-band'))
   assert.ok(at(84).includes('$') === false)
@@ -116,12 +154,12 @@ test('folding drops detail before segments', () => {
 })
 
 test('a low quota keeps its countdown even when folded', () => {
-  const text = plain(renderRuns(DEMOS.hot, { theme: 'clay' }, 56))
+  const text = plain(renderRuns(DEMOS.hot, { theme: 'clay', rows: 1 }, 56))
   assert.ok(text.includes('↻38m'), text)
 })
 
 test('colors follow the thresholds', () => {
-  const colorOf = (snap, needle) => paint(layoutBand(snap, { theme: 'clay' }, 200)).find((r) => r.text === needle).fg
+  const colorOf = (snap, needle) => paint(layoutBand(snap, { theme: 'clay' }, 220)).flat().find((r) => r.text === needle).fg
   assert.equal(colorOf(DEMOS.steady, '42%'), '#A3C281')
   assert.equal(colorOf(DEMOS.warm, '78%'), '#E9B44C')
   assert.equal(colorOf(DEMOS.hot, '94%'), '#F0715A')
@@ -129,10 +167,10 @@ test('colors follow the thresholds', () => {
 })
 
 test('api-key sessions lead with spend; fresh ones do not', () => {
-  const api = paint(layoutBand(DEMOS.apikey, { theme: 'clay' }, 200)).find((r) => r.text === '$12.80')
+  const api = paint(layoutBand(DEMOS.apikey, { theme: 'clay' }, 220)).flat().find((r) => r.text === '$12.80')
   assert.equal(api.fg, '#D97757')
   assert.equal(api.bold, true)
-  const fresh = paint(layoutBand(DEMOS.fresh, { theme: 'clay' }, 200)).find((r) => r.text.includes('$0.00'))
+  const fresh = paint(layoutBand(DEMOS.fresh, { theme: 'clay' }, 220)).flat().find((r) => r.text.includes('$0.00'))
   assert.notEqual(fresh.fg, '#D97757')
 })
 
@@ -140,7 +178,7 @@ test('hidden segments stay hidden', () => {
   const band = layoutBand(DEMOS.steady, { hide: ['git', 'quota'] }, 200)
   assert.deepEqual(
     band.segments.map((s) => s.id),
-    ['model', 'dir', 'ctx', 'cost'],
+    ['host', 'model', 'dir', 'ctx', 'cost'],
   )
   const only7d = layoutBand(DEMOS.steady, { hide: ['5h'] }, 200)
   assert.ok(only7d.segments.some((s) => s.id === '7d') && !only7d.segments.some((s) => s.id === '5h'))
@@ -164,9 +202,9 @@ test('hiding cost keeps the time', () => {
 })
 
 test('the band shape is one fill split by dividers', () => {
-  const band = layoutBand(DEMOS.steady, { theme: 'clay', shape: 'band', glyphs: 'nerd' }, 200)
-  const runs = paint(band)
-  const text = plain(runs)
+  const band = layoutBand(DEMOS.steady, { theme: 'clay', shape: 'band', glyphs: 'nerd', width: 'fit' }, 220)
+  const runs = paint(band)[0]
+  const text = plain([runs])
   assert.ok(text.startsWith('\uE0B6') && text.endsWith('\uE0B4'), text)
   assert.equal(text.split(' │ ').length, band.segments.length)
   const inside = runs.slice(1, -1)
@@ -175,8 +213,14 @@ test('the band shape is one fill split by dividers', () => {
 })
 
 test('the model stays legible on a bare row', () => {
-  const runs = paint(layoutBand(DEMOS.steady, { theme: 'clay', shape: 'line' }, 200))
+  const runs = paint(layoutBand(DEMOS.steady, { theme: 'clay', shape: 'line' }, 220)).flat()
   assert.equal(runs.find((r) => r.text === 'Opus 5.5').fg, '#E8E5DA')
+})
+
+test('the host segment reads user@host', () => {
+  const text = plain(renderRuns({ ...DEMOS.steady, user: 'william', host: 'macbook' }, { theme: 'clay' }, 220))
+  assert.ok(text.startsWith(' william@macbook │ ✻ Opus 5.5'), text)
+  assert.ok(!plain(renderRuns(DEMOS.steady, { hide: ['host'] }, 220)).includes('@'))
 })
 
 test('statusLine JSON becomes a snapshot', () => {

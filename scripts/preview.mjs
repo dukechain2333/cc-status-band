@@ -7,7 +7,7 @@
 //   node scripts/preview.mjs --glyphs nerd   with Nerd Font caps
 
 import { renderRuns } from '../core/band.js'
-import { detectColorMode, toAnsi } from '../core/ansi.js'
+import { detectColorMode, rowsToAnsi } from '../core/ansi.js'
 import { DEMOS } from '../core/demo.js'
 import { THEMES, THEME_NAMES } from '../core/themes.js'
 
@@ -25,10 +25,10 @@ const dim = (s) => `\x1b[2m${s}\x1b[0m`
 
 if (args.includes('--states')) {
   for (const state of Object.keys(DEMOS)) {
-    console.log(dim(state.padEnd(8)) + ' ' + toAnsi(renderRuns(DEMOS[state], { theme, shape, glyphs }, columns), mode))
+    console.log(dim(state) + '\n' + rowsToAnsi(renderRuns(DEMOS[state], { theme, shape, glyphs }, columns), mode))
   }
 } else {
   for (const name of THEME_NAMES) {
-    console.log(dim(THEMES[name].label.padEnd(8)) + ' ' + toAnsi(renderRuns(DEMOS.steady, { theme: name, shape, glyphs }, columns), mode))
+    console.log(dim(THEMES[name].label) + '\n' + rowsToAnsi(renderRuns(DEMOS.steady, { theme: name, shape, glyphs }, columns), mode))
   }
 }

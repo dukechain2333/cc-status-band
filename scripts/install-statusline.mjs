@@ -44,7 +44,7 @@ if (args.includes('--uninstall')) {
 
 const passthrough = []
 for (let i = 0; i < args.length; i++) {
-  if (/^--(theme|shape|glyphs|time|hide|colors)$/.test(args[i]) && args[i + 1]) passthrough.push(args[i], args[++i])
+  if (/^--(theme|shape|glyphs|time|rows|width|hide|colors)$/.test(args[i]) && args[i + 1]) passthrough.push(args[i], args[++i])
 }
 
 if (settings.statusLine) console.log(`Replacing your current statusLine: ${JSON.stringify(settings.statusLine)}`)

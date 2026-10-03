@@ -13,15 +13,17 @@
 //   --shape   auto | chips | arrows | line          STATUS_BAND_SHAPE
 //   --glyphs  unicode | nerd | ascii                STATUS_BAND_GLYPHS
 //   --time    elapsed | clock | clock12 | off       STATUS_BAND_TIME
-//   --hide    model,dir,git,ctx,5h,7d,spend,quota,cost   STATUS_BAND_HIDE
+//   --rows    1 | 2                                 STATUS_BAND_ROWS
+//   --width   full | fit                            STATUS_BAND_WIDTH
+//   --hide    host,model,dir,git,ctx,5h,7d,spend,quota,cost   STATUS_BAND_HIDE
 //             (cost hides the dollars and keeps the time; quota = 5h,7d,spend)
 //   --colors  truecolor | 256                       STATUS_BAND_COLORS
 //   --demo    steady | fresh | warm | hot | apikey  (ignores stdin)
 
 import { execFileSync } from 'node:child_process'
-import { homedir } from 'node:os'
+import { homedir, hostname, userInfo } from 'node:os'
 import { renderRuns } from '../core/band.js'
-import { toAnsi, detectColorMode } from '../core/ansi.js'
+import { rowsToAnsi, detectColorMode } from '../core/ansi.js'
 import { GIT_STATUS_ARGS, parseGitStatus } from '../core/git.js'
 import { fromStatusLine } from '../core/snapshot.js'
 import { DEMOS } from '../core/demo.js'
@@ -32,6 +34,8 @@ function parseArgs(argv, env) {
     shape: env.STATUS_BAND_SHAPE,
     glyphs: env.STATUS_BAND_GLYPHS,
     time: env.STATUS_BAND_TIME,
+    rows: env.STATUS_BAND_ROWS,
+    width: env.STATUS_BAND_WIDTH,
     hide: env.STATUS_BAND_HIDE,
     colors: env.STATUS_BAND_COLORS,
     demo: null,
@@ -42,6 +46,7 @@ function parseArgs(argv, env) {
     const value = m[2] !== undefined ? m[2] : argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : 'steady'
     opts[m[1]] = value
   }
+  opts.rows = Number(opts.rows) === 1 ? 1 : 2
   opts.hide = String(opts.hide || '')
     .split(',')
     .map((s) => s.trim())
@@ -87,10 +92,15 @@ async function main() {
       input = JSON.parse((await readStdin()) || '{}')
     } catch {}
     const cwd = (input.workspace && input.workspace.current_dir) || input.cwd || process.cwd()
-    snapshot = fromStatusLine(input, { home: homedir(), now: Date.now(), git: gitStatus(cwd) })
+    let user = ''
+    try {
+      user = userInfo().username
+    } catch {}
+    const host = hostname().split('.')[0]
+    snapshot = fromStatusLine(input, { home: homedir(), now: Date.now(), git: gitStatus(cwd), user, host })
   }
   const runs = renderRuns(snapshot, opts, columns)
-  process.stdout.write(toAnsi(runs, opts.colors === '256' || opts.colors === 'truecolor' ? opts.colors : detectColorMode(env)) + '\n')
+  process.stdout.write(rowsToAnsi(runs, opts.colors === '256' || opts.colors === 'truecolor' ? opts.colors : detectColorMode(env)) + '\n')
 }
 
 main().catch((err) => {

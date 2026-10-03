@@ -1,10 +1,11 @@
-// The band's layout: a snapshot of the session goes in, a row of colored runs
-// comes out. Both renderers share it, so the mod and the statusLine script
-// fold, color and space the band the same way.
+// The band's layout: a snapshot of the session goes in, one or two rows of
+// colored runs come out. Both renderers share it, so the mod and the
+// statusLine script fold, color and space the band the same way.
 //
 // A snapshot is plain data:
 //
 //   {
+//     user: 'william', host: 'macbook',
 //     model: 'Opus 5.5', effort: 'xhigh' | null,
 //     cwd: '/Users/me/code/app', home: '/Users/me',
 //     git: { branch, staged, changed, ahead, behind } | null,
@@ -19,7 +20,12 @@
 import { effortPips, formatClock, formatDuration, formatPath, formatResetIn, formatTokens, formatUsd, textWidth } from './format.js'
 import { resolveGlyphs, resolveShape, resolveTheme } from './themes.js'
 
-export const SEGMENT_IDS = ['model', 'dir', 'git', 'ctx', '5h', '7d', 'spend', 'cost']
+export const SEGMENT_IDS = ['host', 'model', 'dir', 'git', 'ctx', '5h', '7d', 'spend', 'cost']
+
+// The band reads as two groups: where you are, then how much you have used.
+// On one row the second group sits at the right end; on two rows each group
+// gets its own row.
+const IDENTITY = ['host', 'model', 'dir', 'git']
 
 // Names `hide` accepts: every segment, plus `quota` for all three windows.
 // Hiding `cost` drops the dollar figure and keeps the time beside it.
@@ -61,6 +67,7 @@ const FOLDS = [
   ['git', 1],
   ['dir', 1],
   ['cost', -1],
+  ['host', -1],
   ['7d', 2],
   ['spend', 2],
   ['5h', 2],
@@ -77,6 +84,15 @@ const FOLDS = [
 
 const text = (t, role, bold) => ({ text: t, role, bold: !!bold })
 const bar = (percent, role, width) => ({ bar: Math.max(0, Math.min(100, percent)), role, width })
+
+function hostSegment(s) {
+  if (!s.user && !s.host) return null
+  const items = []
+  if (s.user) items.push(text(s.user, 'fg'))
+  if (s.user && s.host) items.push(text('@', 'muted'))
+  if (s.host) items.push(text(s.host, 'fg'))
+  return { id: 'host', label: 'user@host', items }
+}
 
 function modelSegment(s, g, level) {
   const items = [text(g.model + ' ', 'icon'), text(s.model || 'Claude', 'fg', true)]
@@ -174,6 +190,7 @@ function buildSegments(s, g, levels, { hide, time }) {
     const seg = make(s, g, levels[id], extra)
     if (seg) out.push(seg)
   }
+  add('host', hostSegment)
   add('model', modelSegment)
   add('dir', dirSegment)
   add('git', gitSegment)
@@ -204,25 +221,52 @@ export function measure(segments, shape, g) {
   return w
 }
 
-// Lays the snapshot out in at most `columns` cells.
-//   options: { theme, shape, glyphs, hide }
+// Lays the snapshot out in at most `rows` rows of `columns` cells.
+//   options: { theme, shape, glyphs, hide, time, rows: 1 | 2, width: 'full' | 'fit' }
+//
+// Everything on one row when it fits at full detail. Otherwise, with two rows
+// allowed, the two groups split onto their own rows, and only a row that
+// still overflows folds its own segments.
 export function layoutBand(snapshot, options = {}, columns = 120) {
   const theme = resolveTheme(options.theme)
   // A palette without fills has nothing to draw chips or arrows with.
   const shape = theme.model.bg ? resolveShape(options.shape, theme) : 'line'
   const glyphs = resolveGlyphs(options.glyphs)
+  const maxRows = options.rows === 1 ? 1 : 2
   const pick = {
     hide: expandHide(options.hide),
     time: TIME_MODES.includes(options.time) ? options.time : 'elapsed',
   }
-  const levels = { model: 0, dir: 0, git: 0, ctx: 0, '5h': 0, '7d': 0, spend: 0, cost: 0 }
-  let segments = buildSegments(snapshot, glyphs, levels, pick)
-  for (const [id, level] of FOLDS) {
-    if (measure(segments, shape, glyphs) <= columns) break
-    levels[id] = level
-    segments = buildSegments(snapshot, glyphs, levels, pick)
+  const levels = Object.fromEntries(SEGMENT_IDS.map((id) => [id, 0]))
+  const build = () => buildSegments(snapshot, glyphs, levels, pick)
+  const fits = (row) => measure(row, shape, glyphs) <= columns
+  const split = (segs) =>
+    [segs.filter((seg) => IDENTITY.includes(seg.id)), segs.filter((seg) => !IDENTITY.includes(seg.id))].filter((row) => row.length)
+
+  let rows = [build()]
+  if (!fits(rows[0])) {
+    const steps = FOLDS.slice()
+    if (maxRows === 2) rows = split(rows[0])
+    for (;;) {
+      const over = new Set(rows.filter((row) => !fits(row)).flatMap((row) => row.map((seg) => seg.id)))
+      if (!over.size) break
+      const next = steps.findIndex(([id]) => over.has(id))
+      if (next < 0) break
+      const [id, level] = steps.splice(next, 1)[0]
+      levels[id] = level
+      rows = maxRows === 2 ? split(build()) : [build()]
+    }
   }
-  return { segments, theme, shape, glyphs, width: measure(segments, shape, glyphs) }
+  return {
+    rows,
+    segments: rows.flat(),
+    theme,
+    shape,
+    glyphs,
+    columns,
+    // Only the one-band shape stretches; other shapes keep their own width.
+    fill: shape === 'band' && options.width !== 'fit',
+  }
 }
 
 function barText(item, g) {
@@ -235,10 +279,14 @@ function barText(item, g) {
   }
 }
 
-// Turns a laid-out band into runs of { text, fg, bg, bold }. A null fg or bg
-// is the terminal's own color.
+// Turns a laid-out band into rows of runs, { text, fg, bg, bold }. A null fg
+// or bg is the terminal's own color.
 export function paint(band) {
-  const { segments, theme: T, shape, glyphs: g } = band
+  return band.rows.map((row) => paintRow(row, band))
+}
+
+function paintRow(segments, band) {
+  const { theme: T, shape, glyphs: g } = band
   // On a bare row the model chip's on-accent colors would vanish into the
   // terminal, so it borrows the plain tone and keeps the accent for its marks.
   // The one-band shape does the same inside its single fill.
@@ -249,6 +297,10 @@ export function paint(band) {
     return seg.id === 'model' ? (shape === 'line' && T.model.bg ? bareModel : T.model) : i % 2 === 1 ? T.a : T.b
   }
   const bgOf = (i) => (shape === 'line' || !segments[i] ? null : toneOf(segments[i], i).bg)
+  // A stretched band fills its spare cells: between the two groups when both
+  // share the row, else at the end.
+  const spare = single && band.fill ? Math.max(0, band.columns - measure(segments, shape, g)) : 0
+  const groupBreak = segments.findIndex((seg) => !IDENTITY.includes(seg.id))
   const runs = []
   if (single && segments.length) {
     if (g.capLeft) runs.push({ text: g.capLeft, fg: T.b.bg, bg: null })
@@ -271,7 +323,8 @@ export function paint(band) {
       })[role] || tone.fg
 
     if (shape === 'line' && i > 0) runs.push({ text: ` ${g.sep} `, fg: T.sep, bg: null })
-    if (single && i > 0) runs.push({ text: ` ${g.sep} `, fg: T.divider, bg })
+    if (single && i > 0 && spare && i === groupBreak) runs.push({ text: ' '.repeat(3 + spare), fg: T.divider, bg })
+    else if (single && i > 0) runs.push({ text: ` ${g.sep} `, fg: T.divider, bg })
     if (shape === 'chips' && i > 0) runs.push({ text: ' ', fg: null, bg: null })
     if (shape === 'chips' && g.capLeft) runs.push({ text: g.capLeft, fg: bg, bg: null })
     if (bg && !single) runs.push({ text: ' ', fg: tone.fg, bg })
@@ -289,6 +342,7 @@ export function paint(band) {
     if (shape === 'arrows' && g.arrow) runs.push({ text: g.arrow, fg: bg, bg: bgOf(i + 1) })
   })
   if (single && segments.length) {
+    if (spare && groupBreak <= 0) runs.push({ text: ' '.repeat(spare), fg: T.b.fg, bg: T.b.bg })
     runs.push({ text: ' ', fg: T.b.fg, bg: T.b.bg })
     if (g.capRight) runs.push({ text: g.capRight, fg: T.b.bg, bg: null })
   }
@@ -310,7 +364,7 @@ function mergeRuns(runs) {
   return out
 }
 
-// The whole pipeline in one call.
+// The whole pipeline in one call: rows of runs.
 export function renderRuns(snapshot, options, columns) {
   return paint(layoutBand(snapshot, options, columns))
 }

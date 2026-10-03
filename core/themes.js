@@ -14,7 +14,7 @@ export const THEMES = {
   clay: {
     label: 'Clay',
     note: 'warm dark',
-    shape: 'chips',
+    shape: 'band',
     terminal: { bg: '#1A1917', fg: '#E8E5DA' },
     accent: '#D97757',
     model: { bg: '#D97757', fg: '#1A1917', icon: '#1A1917', pip: '#1A1917', pipOff: '#A9583C' },
@@ -30,7 +30,7 @@ export const THEMES = {
   paper: {
     label: 'Paper',
     note: 'for light terminals',
-    shape: 'chips',
+    shape: 'band',
     terminal: { bg: '#FAF9F5', fg: '#141413' },
     accent: '#B4552F',
     model: { bg: '#141413', fg: '#FAF9F5', icon: '#E08A68', pip: '#FAF9F5', pipOff: '#5E5D59' },

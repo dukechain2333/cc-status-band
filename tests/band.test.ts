@@ -2,6 +2,14 @@
 
 import { expect, mock, test } from 'claude-code/testing'
 
+const ABOVE = {
+  plugin: 'status-band',
+  component: 'AbovePrompt',
+  surface: 'terminal',
+  viewport: { columns: 200, rows: 40 },
+  props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 196, scroll: { offset: 0, bodyRows: 9 }, view: {} },
+} as const
+
 const HINT = {
   plugin: 'status-band',
   component: 'PromptHint',
@@ -36,7 +44,7 @@ function session(on, saved = new Map<string, unknown>()) {
     saved.set(e.key, e.value)
     return { value: undefined }
   })
-  on('env.get', ($, e) => ({ value: e.name === 'HOME' ? '/Users/you' : undefined }))
+  on('env.get', ($, e) => ({ value: { HOME: '/Users/you', USER: 'you' }[e.name] }))
   on('settings.read', () => ({ value: { effortLevel: 'high' } }))
   on('session.model', () => ({ value: 'claude-opus-5-5' }))
   on('session.cwd', () => ({ value: '/Users/you/code/cc-status-band' }))
@@ -51,7 +59,7 @@ function session(on, saved = new Map<string, unknown>()) {
       cost: { usd: 1.42 },
     },
   }))
-  on('process.run', () => ({ value: { exitCode: 0, stdout: GIT, stderr: '' } }))
+  on('process.run', ($, e) => ({ value: { exitCode: 0, stdout: e.argv[0] === 'hostname' ? 'macbook\n' : GIT, stderr: '' } }))
   on('command.register', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
@@ -64,6 +72,11 @@ async function start($) {
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/Users/you/code/cc-status-band' })
 }
 
+// Everything a mounted band shows, every row of it.
+async function bandText(ui): Promise<string> {
+  return textOf((await ui.find({ type: 'Box' })) ?? (await ui.find({ type: 'Text', text: /Opus/ })))
+}
+
 function textOf(node): string {
   if (node == null) return ''
   if (typeof node === 'string') return node
@@ -71,17 +84,21 @@ function textOf(node): string {
   return textOf(node.children ?? node.props?.children)
 }
 
-test('the band draws under the prompt with every segment', async ($, on) => {
+test('by default the band draws above the prompt with every segment', async ($, on) => {
   session(on)
   await start($)
-  const ui = await $.ui.mount(HINT)
-  const band = await ui.find({ type: 'Text', text: /Opus 5\.5/ })
-  expect(band).toBeDefined()
-  const text = textOf(band)
-  for (const part of ['Opus 5.5', '●●●○○', '~/code/cc-status-band', 'main', '42%', '72% left', '59% left', '$1.42']) {
+  const ui = await $.ui.mount(ABOVE)
+  const text = await bandText(ui)
+  for (const part of ['you@macbook', 'Opus 5.5', '●●●○○', '~/code/cc-status-band', 'main', '42%', '72% left', '59% left', '$1.42']) {
     expect(text).toContain(part)
   }
-  // Claude Code's own hint line stays beneath the band
+})
+
+test('below the prompt, Claude Code keeps its hint line beneath the band', async ($, on) => {
+  session(on, new Map([['prefs', { place: 'below' }]]))
+  await start($)
+  const ui = await $.ui.mount(HINT)
+  expect(await bandText(ui)).toContain('Opus 5.5')
   expect(await ui.find({ type: 'Text', text: '? for shortcuts' })).toBeDefined()
 })
 
@@ -90,7 +107,7 @@ test('/band with words saves the choice and redraws', async ($, on) => {
   await start($)
   const answer = await $.command.run({ command: 'band', args: 'aurora line nerd' })
   expect(answer.text).toContain('theme aurora')
-  expect(saved.get('prefs')).toMatchObject({ theme: 'aurora', shape: 'line', glyphs: 'nerd', place: 'below' })
+  expect(saved.get('prefs')).toMatchObject({ theme: 'aurora', shape: 'line', glyphs: 'nerd', place: 'above' })
 })
 
 test('/band time switches the cost segment to the wall clock', async ($, on) => {
@@ -99,8 +116,8 @@ test('/band time switches the cost segment to the wall clock', async ($, on) => 
   const answer = await $.command.run({ command: 'band', args: 'time clock12' })
   expect(answer.text).toContain('time clock12')
   expect(saved.get('prefs')).toMatchObject({ time: 'clock12' })
-  const ui = await $.ui.mount(HINT)
-  expect(textOf(await ui.find({ type: 'Text', text: /Opus 5\.5/ }))).toMatch(/\$1\.42 {2}◷ \d\d:\d\d[AP]M/)
+  const ui = await $.ui.mount(ABOVE)
+  expect(await bandText(ui)).toMatch(/\$1\.42 {2}◷ \d\d:\d\d[AP]M/)
 })
 
 test('/band hide cost keeps the clock', async ($, on) => {
@@ -109,13 +126,13 @@ test('/band hide cost keeps the clock', async ($, on) => {
   await $.command.run({ command: 'band', args: 'time clock' })
   await $.command.run({ command: 'band', args: 'hide cost' })
   expect(saved.get('prefs')).toMatchObject({ time: 'clock', hide: ['cost'] })
-  const text = textOf(await (await $.ui.mount(HINT)).find({ type: 'Text', text: /Opus 5\.5/ }))
+  const text = await bandText(await $.ui.mount(ABOVE))
   expect(text).not.toContain('$1.42')
   expect(text).toMatch(/◷ \d\d:\d\d/)
 })
 
-test('the band keeps one blank row above it by default, and /band gap changes it', async ($, on) => {
-  const { saved } = session(on)
+test('below the prompt the band keeps one blank row above it, and /band gap changes it', async ($, on) => {
+  const { saved } = session(on, new Map([['prefs', { place: 'below' }]]))
   await start($)
   let ui = await $.ui.mount(HINT)
   expect((await ui.find({ type: 'Box' })).props.marginTop).toBe(1)
@@ -134,8 +151,8 @@ test('/band rejects a word it does not know', async ($, on) => {
   expect(saved.get('prefs')).toBeUndefined()
 })
 
-test('moving the band above the prompt leaves the hint line alone', async ($, on) => {
-  session(on, new Map([['prefs', { place: 'above' }]]))
+test('above the prompt, the hint line is left alone', async ($, on) => {
+  session(on)
   await start($)
   const ui = await $.ui.mount(HINT)
   expect(await ui.find({ type: 'Text', text: /Opus/ })).toBeUndefined()
