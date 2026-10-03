@@ -58,7 +58,7 @@ function sheet(rows, columns) {
   )
 }
 
-const COLS = 150
+const COLS = 172
 const files = {
   'themes.svg': sheet(
     THEME_NAMES.map((name) => ({
@@ -77,7 +77,7 @@ const files = {
     COLS,
   ),
   'widths.svg': sheet(
-    [150, 112, 84, 56].map((cols) => ({
+    [170, 130, 100, 72].map((cols) => ({
       label: `${cols} cols`,
       bg: THEMES.clay.terminal.bg,
       width: cols,

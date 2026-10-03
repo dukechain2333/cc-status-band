@@ -5,7 +5,7 @@
 // API, draws the band at the render site the user picked, and runs the /band
 // picker.
 
-import { SEGMENT_IDS, TIME_MODES, layoutBand, paint } from '../core/band.js'
+import { HIDEABLE, TIME_MODES, layoutBand, paint } from '../core/band.js'
 import { toElements } from '../core/elements.js'
 import { GIT_STATUS_ARGS, parseGitStatus } from '../core/git.js'
 import { fromSession } from '../core/snapshot.js'
@@ -30,7 +30,7 @@ function cleanPrefs(saved) {
   if (!GLYPH_NAMES.includes(p.glyphs)) p.glyphs = DEFAULTS.glyphs
   if (!PLACES.includes(p.place)) p.place = DEFAULTS.place
   if (!TIME_MODES.includes(p.time)) p.time = DEFAULTS.time
-  p.hide = Array.isArray(p.hide) ? p.hide.filter((id) => SEGMENT_IDS.includes(id)) : []
+  p.hide = Array.isArray(p.hide) ? p.hide.filter((id) => HIDEABLE.includes(id)) : []
   p.hint = p.hint !== false
   return p
 }
@@ -60,8 +60,8 @@ function applyArgs(p, args) {
       next.hint = words[i + 1] !== 'off'
       if (words[i + 1] === 'on' || words[i + 1] === 'off') i += 1
     } else if (w === 'hide' || w === 'show') {
-      const ids = words.slice(i + 1).filter((id) => SEGMENT_IDS.includes(id))
-      if (!ids.length) return `Name a segment to ${w}: ${SEGMENT_IDS.join(', ')}`
+      const ids = words.slice(i + 1).filter((id) => HIDEABLE.includes(id))
+      if (!ids.length) return `Name a segment to ${w}: ${HIDEABLE.join(', ')}`
       next.hide = w === 'hide' ? [...new Set([...next.hide, ...ids])] : next.hide.filter((id) => !ids.includes(id))
       i = words.length
     } else {

@@ -19,7 +19,20 @@
 import { effortPips, formatClock, formatDuration, formatPath, formatResetIn, formatTokens, formatUsd, textWidth } from './format.js'
 import { resolveGlyphs, resolveShape, resolveTheme } from './themes.js'
 
-export const SEGMENT_IDS = ['model', 'dir', 'git', 'ctx', 'quota', 'cost']
+export const SEGMENT_IDS = ['model', 'dir', 'git', 'ctx', '5h', '7d', 'spend', 'cost']
+
+// Names `hide` accepts: every segment, plus `quota` for all three windows.
+// Hiding `cost` drops the dollar figure and keeps the time beside it.
+export const HIDEABLE = [...SEGMENT_IDS, 'quota']
+
+export function expandHide(list) {
+  const out = new Set()
+  for (const id of Array.isArray(list) ? list : []) {
+    if (id === 'quota') ['5h', '7d', 'spend'].forEach((w) => out.add(w))
+    else if (SEGMENT_IDS.includes(id)) out.add(id)
+  }
+  return [...out]
+}
 
 // What the time beside the cost shows: the session's running time, the wall
 // clock (24-hour or 12-hour), or nothing.
@@ -40,19 +53,25 @@ export function quotaRole(left) {
 // API-key sessions have no quota windows, so their cost is kept until the
 // very last step.
 const FOLDS = [
-  ['cost', 1],
   ['ctx', 1],
-  ['quota', 1],
+  ['7d', 1],
+  ['spend', 1],
+  ['5h', 1],
+  ['cost', 1],
   ['git', 1],
   ['dir', 1],
   ['cost', -1],
-  ['quota', 2],
+  ['7d', 2],
+  ['spend', 2],
+  ['5h', 2],
   ['git', -1],
   ['ctx', 2],
   ['dir', 2],
+  ['7d', -1],
+  ['spend', -1],
   ['model', 2],
   ['cost', -2],
-  ['quota', 3],
+  ['5h', 3],
   ['dir', -1],
 ]
 
@@ -104,32 +123,26 @@ function ctxSegment(s, g, level) {
   return { id: 'ctx', label: 'context window', items }
 }
 
-function quotaSegment(s, g, level) {
-  const limits = s.limits || {}
-  const windows = [
-    ['5h', limits.five],
-    ['7d', limits.seven],
-    ['spend', limits.spend],
-  ].filter(([, w]) => w && w.left != null)
-  if (!windows.length) return null
-  const items = []
-  windows.forEach(([name, w], i) => {
+// One chip per quota window. Each bar drains as the window is spent.
+const WINDOWS = { '5h': 'five', '7d': 'seven', spend: 'spend' }
+
+function windowSegment(id) {
+  return (s, g, level) => {
+    const w = (s.limits || {})[WINDOWS[id]]
+    if (!w || w.left == null) return null
     const left = Math.max(0, Math.round(w.left))
     const role = quotaRole(left)
     const reset = formatResetIn(w.resetsAt, s.now)
-    if (i === 0) {
-      items.push(text(name + ' ', 'muted'))
-      if (level === 0) items.push(bar(left, role, 8), text(' ', 'fg'))
-      items.push(text(left + '%', role, true))
-      if (level === 0) items.push(text(' left', 'muted'))
-      // A low window keeps its countdown until the very last fold.
-      if (reset && (level < 2 || (level === 2 && role === 'crit'))) items.push(text(' ' + g.reset + reset, role === 'crit' ? 'crit' : 'muted'))
-    } else if (level < 2) {
-      items.push(text('  ' + name + ' ', 'muted'), text(left + '%', role, true))
-      if (level === 0 && reset) items.push(text(' ' + g.reset + reset, 'muted'))
+    const items = [text(id + ' ', 'muted')]
+    if (level < 2) items.push(bar(left, role, level === 0 ? 8 : 5), text(' ', 'fg'))
+    items.push(text(left + '%', role, true))
+    if (level === 0) items.push(text(' left', 'muted'))
+    // A low window keeps its countdown until the very last fold.
+    if (reset && (level < 2 || (level === 2 && role === 'crit'))) {
+      items.push(text(' ' + g.reset + reset, role === 'crit' ? 'crit' : 'muted'))
     }
-  })
-  return { id: 'quota', label: 'quota left', items }
+    return { id, label: id === 'spend' ? 'spend limit left' : id + ' quota left', items }
+  }
 }
 
 function timeText(s, time) {
@@ -138,30 +151,36 @@ function timeText(s, time) {
   return s.elapsedMs == null ? '' : formatDuration(s.elapsedMs)
 }
 
-function costSegment(s, g, level, hero, time) {
+function costSegment(s, g, level, { hero, time, hideMoney }) {
   if (level === -1 && !hero) return null
   const items = []
-  if (s.cost != null) items.push(text(formatUsd(s.cost), hero ? 'accent' : 'fg', hero))
+  if (s.cost != null && !hideMoney) items.push(text(formatUsd(s.cost), hero ? 'accent' : 'fg', hero))
   const t = level === 0 ? timeText(s, time) : ''
   if (t) items.push(text((items.length ? '  ' : '') + (g.clock ? g.clock + ' ' : '') + t, 'muted'))
-  return items.length ? { id: 'cost', label: hero ? 'api spend · time' : 'cost · time', items } : null
+  const label = hideMoney ? 'time' : hero ? 'api spend · time' : 'cost · time'
+  return items.length ? { id: 'cost', label, items } : null
 }
 
 function buildSegments(s, g, levels, { hide, time }) {
   const limits = s.limits || {}
+  const hideMoney = hide.includes('cost')
   // Without quota windows (API-key billing) spend is the number to watch.
-  const hero = !limits.five && !limits.seven && !limits.spend && s.cost > 0
+  const hero = !hideMoney && !limits.five && !limits.seven && !limits.spend && s.cost > 0
+  const extra = { hero, time, hideMoney }
   const out = []
   const add = (id, make) => {
-    if (hide.includes(id) || levels[id] < -1 || (levels[id] < 0 && id !== 'cost')) return
-    const seg = make(s, g, levels[id], hero, time)
+    // `cost` stays to carry the time; its segment drops the money itself.
+    if ((hide.includes(id) && id !== 'cost') || levels[id] < -1 || (levels[id] < 0 && id !== 'cost')) return
+    const seg = make(s, g, levels[id], extra)
     if (seg) out.push(seg)
   }
   add('model', modelSegment)
   add('dir', dirSegment)
   add('git', gitSegment)
   add('ctx', ctxSegment)
-  add('quota', quotaSegment)
+  add('5h', windowSegment('5h'))
+  add('7d', windowSegment('7d'))
+  add('spend', windowSegment('spend'))
   add('cost', costSegment)
   return out
 }
@@ -192,10 +211,10 @@ export function layoutBand(snapshot, options = {}, columns = 120) {
   const shape = theme.model.bg ? resolveShape(options.shape, theme) : 'line'
   const glyphs = resolveGlyphs(options.glyphs)
   const pick = {
-    hide: Array.isArray(options.hide) ? options.hide : [],
+    hide: expandHide(options.hide),
     time: TIME_MODES.includes(options.time) ? options.time : 'elapsed',
   }
-  const levels = { model: 0, dir: 0, git: 0, ctx: 0, quota: 0, cost: 0 }
+  const levels = { model: 0, dir: 0, git: 0, ctx: 0, '5h': 0, '7d': 0, spend: 0, cost: 0 }
   let segments = buildSegments(snapshot, glyphs, levels, pick)
   for (const [id, level] of FOLDS) {
     if (measure(segments, shape, glyphs) <= columns) break

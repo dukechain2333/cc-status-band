@@ -1,6 +1,6 @@
 {
   "name": "cc-status-band",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A designed status band for Claude Code: model and effort, directory, git, context gauge, quota left and cost. Ships as a mod and as a classic statusLine command.",
   "type": "module",
   "license": "MIT",

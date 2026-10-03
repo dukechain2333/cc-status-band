@@ -78,7 +78,7 @@ test('the band draws under the prompt with every segment', async ($, on) => {
   const band = await ui.find({ type: 'Text', text: /Opus 5\.5/ })
   expect(band).toBeDefined()
   const text = textOf(band)
-  for (const part of ['Opus 5.5', '●●●○○', '~/code/cc-status-band', 'main', '42%', '72% left', '7d 59%', '$1.42']) {
+  for (const part of ['Opus 5.5', '●●●○○', '~/code/cc-status-band', 'main', '42%', '72% left', '59% left', '$1.42']) {
     expect(text).toContain(part)
   }
   // Claude Code's own hint line stays beneath the band
@@ -101,6 +101,17 @@ test('/band time switches the cost segment to the wall clock', async ($, on) => 
   expect(saved.get('prefs')).toMatchObject({ time: 'clock12' })
   const ui = await $.ui.mount(HINT)
   expect(textOf(await ui.find({ type: 'Text', text: /Opus 5\.5/ }))).toMatch(/\$1\.42 {2}◷ \d\d:\d\d[AP]M/)
+})
+
+test('/band hide cost keeps the clock', async ($, on) => {
+  const { saved } = session(on)
+  await start($)
+  await $.command.run({ command: 'band', args: 'time clock' })
+  await $.command.run({ command: 'band', args: 'hide cost' })
+  expect(saved.get('prefs')).toMatchObject({ time: 'clock', hide: ['cost'] })
+  const text = textOf(await (await $.ui.mount(HINT)).find({ type: 'Text', text: /Opus 5\.5/ }))
+  expect(text).not.toContain('$1.42')
+  expect(text).toMatch(/◷ \d\d:\d\d/)
 })
 
 test('/band rejects a word it does not know', async ($, on) => {

@@ -19,14 +19,15 @@ It ships two ways from one codebase:
 | Directory | `~/code/cc-status-band` | Abbreviates to `~/c/cc-status-band`, then the folder name, as space runs out. |
 | Git | `⎇ main +2 ~3 ↑1` | Staged, unstaged/untracked, ahead/behind. Folds to `⎇ main ●` when narrow. |
 | Context | `ctx ━━━━────── 42% 84k/200k` | Fills as the window fills: amber from 60%, red from 85%. |
-| Quota left | `5h ━━━━━━── 72% left ↻2h14m  7d 59% ↻3d` | Pro/Max subscribers. Drains as you spend: amber at 40% left, red under 15%. `↻` counts down to the refill. Gateway spend limits show here too. |
-| Cost · time | `$1.42  ◷ 23m` | The session's running time by default, or the wall clock with `/band time clock`. With API-key billing there are no quota windows, so spend is highlighted instead. |
+| 5-hour quota left | `5h ━━━━━━── 72% left ↻2h14m` | Pro/Max subscribers. Drains as you spend: amber at 40% left, red under 15%. `↻` counts down to the refill. |
+| Weekly quota left | `7d ━━━━╸─── 59% left ↻3d` | Its own chip and gauge, same colors. A gateway spend limit gets a third chip, `spend`. |
+| Cost · time | `$1.42  ◷ 23m` | The session's running time by default, or the wall clock with `/band time clock`. `/band hide cost` drops the dollars and keeps the time. With API-key billing there are no quota windows, so spend is highlighted instead. |
 
 ![States: fresh, steady, warm, hot, API key](docs/states.svg)
 
 The band measures its row and folds detail away until it fits, so it never wraps:
 
-![The same session at 150, 112, 84 and 56 columns](docs/widths.svg)
+![The same session at 170, 130, 100 and 72 columns](docs/widths.svg)
 
 ## Install the mod
 
@@ -72,7 +73,7 @@ Or set things directly. Each word sets whatever it names:
 /band nerd                 glyphs: unicode | nerd | ascii
 /band above                place: below | above
 /band time clock           time beside the cost: elapsed | clock (13:24) | clock12 (01:24PM) | off
-/band hide cost git        hide segments: model dir git ctx quota cost
+/band hide cost git        hide: model dir git ctx 5h 7d spend cost (quota = all windows)
 /band show cost
 /band hint off             drop Claude Code's own hint line under the band
 /band reset
@@ -109,7 +110,7 @@ Flags (or environment variables):
 | `--shape` | `STATUS_BAND_SHAPE` | `auto` (the theme's own), `chips`, `arrows`, `line` |
 | `--glyphs` | `STATUS_BAND_GLYPHS` | `unicode` (default), `nerd`, `ascii` |
 | `--time` | `STATUS_BAND_TIME` | `elapsed` (default), `clock`, `clock12`, `off` |
-| `--hide` | `STATUS_BAND_HIDE` | comma list: `model,dir,git,ctx,quota,cost` |
+| `--hide` | `STATUS_BAND_HIDE` | comma list: `model,dir,git,ctx,5h,7d,spend,quota,cost` |
 | `--colors` | `STATUS_BAND_COLORS` | `truecolor` or `256` (detected from `COLORTERM`/`TERM_PROGRAM` by default) |
 
 Undo with `node scripts/install-statusline.mjs --uninstall`.

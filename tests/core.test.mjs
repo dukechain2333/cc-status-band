@@ -82,13 +82,13 @@ test('git porcelain v2 parses branch, counts and divergence', () => {
 })
 
 test('the full band shows every segment at a wide width', () => {
-  const band = layoutBand(DEMOS.steady, { theme: 'clay' }, 160)
+  const band = layoutBand(DEMOS.steady, { theme: 'clay' }, 200)
   assert.deepEqual(
     band.segments.map((s) => s.id),
-    ['model', 'dir', 'git', 'ctx', 'quota', 'cost'],
+    ['model', 'dir', 'git', 'ctx', '5h', '7d', 'cost'],
   )
   const text = plain(paint(band))
-  for (const part of ['Opus 5.5', '●●●●○', '~/code/cc-status-band', 'main +2 ~3 ↑1', '42%', '84k/200k', '72% left', '↻2h14m', '7d 59%', '$1.42', '23m']) {
+  for (const part of ['Opus 5.5', '●●●●○', '~/code/cc-status-band', 'main +2 ~3 ↑1', '42%', '84k/200k', '72% left ↻2h14m', '59% left ↻3d', '$1.42', '23m']) {
     assert.ok(text.includes(part), `missing ${part} in ${text}`)
   }
 })
@@ -137,11 +137,30 @@ test('api-key sessions lead with spend; fresh ones do not', () => {
 })
 
 test('hidden segments stay hidden', () => {
-  const band = layoutBand(DEMOS.steady, { hide: ['cost', 'git'] }, 200)
+  const band = layoutBand(DEMOS.steady, { hide: ['git', 'quota'] }, 200)
   assert.deepEqual(
     band.segments.map((s) => s.id),
-    ['model', 'dir', 'ctx', 'quota'],
+    ['model', 'dir', 'ctx', 'cost'],
   )
+  const only7d = layoutBand(DEMOS.steady, { hide: ['5h'] }, 200)
+  assert.ok(only7d.segments.some((s) => s.id === '7d') && !only7d.segments.some((s) => s.id === '5h'))
+})
+
+test('each quota window is its own chip with its own gauge', () => {
+  const band = layoutBand(DEMOS.steady, { theme: 'clay' }, 200)
+  for (const id of ['5h', '7d']) {
+    const seg = band.segments.find((s) => s.id === id)
+    assert.ok(seg.items.some((item) => item.bar != null), `${id} has a bar`)
+  }
+})
+
+test('hiding cost keeps the time', () => {
+  const snap = { ...DEMOS.steady, now: new Date(2026, 9, 3, 13, 24).getTime() }
+  const text = plain(renderRuns(snap, { hide: ['cost'], time: 'clock12' }, 200))
+  assert.ok(text.includes('$') === false, text)
+  assert.ok(text.includes('◷ 01:24PM'), text)
+  const none = layoutBand(snap, { hide: ['cost'], time: 'off' }, 200)
+  assert.ok(!none.segments.some((s) => s.id === 'cost'))
 })
 
 test('the model stays legible on a bare row', () => {

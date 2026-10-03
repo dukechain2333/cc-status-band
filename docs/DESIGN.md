@@ -17,8 +17,9 @@ Left to right, in the order you glance at them:
 2. **Directory.** `~`-relative and bold.
 3. **Git.** Branch, then `+staged ~changed ↑ahead ↓behind`.
 4. **Context.** A ten-cell gauge (`━` filled, `─` track, `╸` for half a cell), percent used, tokens over window.
-5. **Quota left.** The first window gets the gauge, the percent, `left` and a `↻` countdown; later windows get percent and countdown.
-6. **Cost · time.**
+5. **5-hour quota left.** Its own chip: an eight-cell gauge that drains, the percent, `left`, and a `↻` countdown.
+6. **Weekly quota left.** The same chip for the 7-day window. A gateway spend limit gets a third.
+7. **Cost · time.** The time is the session's running time or the wall clock. Hiding cost drops the dollars and keeps the time.
 
 ## Thresholds
 
@@ -33,20 +34,21 @@ A window in `crit` keeps its countdown through one more fold than the others, si
 
 Each step trims one segment. The band stops at the first step that fits.
 
-1. Cost drops the session time
-2. Context gauge shortens to 6 cells and drops token counts
-3. Quota drops its gauge, `left`, and the weekly countdown
+1. Context gauge shortens to 6 cells and drops token counts
+2. Each quota window shortens its gauge to 5 cells and drops `left` (weekly first, then 5-hour)
+3. Cost drops the time
 4. Git collapses to branch and a dirty dot
 5. Directory abbreviates parents (`~/c/cc-status-band`)
 6. Cost hides, unless the session is billed by API key
-7. Quota shows only the first window's percent (plus its countdown when low)
+7. Quota windows become numbers (weekly first); a low window keeps its countdown
 8. Git hides
 9. Context becomes a number
 10. Directory becomes the folder name
-11. The model drops its pips
-12. Cost hides even for API-key sessions
-13. Quota drops its last countdown
-14. Directory hides
+11. The weekly window hides
+12. The model drops its pips
+13. Cost hides even for API-key sessions
+14. The 5-hour window drops its last countdown
+15. Directory hides
 
 ## Palettes
 
