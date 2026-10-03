@@ -114,6 +114,18 @@ test('/band hide cost keeps the clock', async ($, on) => {
   expect(text).toMatch(/◷ \d\d:\d\d/)
 })
 
+test('the band keeps one blank row above it by default, and /band gap changes it', async ($, on) => {
+  const { saved } = session(on)
+  await start($)
+  let ui = await $.ui.mount(HINT)
+  expect((await ui.find({ type: 'Box' })).props.marginTop).toBe(1)
+  await ui.unmount()
+  await $.command.run({ command: 'band', args: 'gap 2' })
+  expect(saved.get('prefs')).toMatchObject({ gap: 2 })
+  ui = await $.ui.mount(HINT)
+  expect((await ui.find({ type: 'Box' })).props.marginTop).toBe(2)
+})
+
 test('/band rejects a word it does not know', async ($, on) => {
   const { saved } = session(on)
   await start($)

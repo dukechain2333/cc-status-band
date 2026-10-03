@@ -13,7 +13,8 @@ import { GLYPH_NAMES, SHAPES, THEMES, THEME_NAMES } from '../core/themes.js'
 
 const PANE = 'status-band'
 const PLACES = ['below', 'above']
-const DEFAULTS = { theme: 'clay', shape: 'auto', glyphs: 'unicode', place: 'below', time: 'elapsed', hide: [], hint: true }
+const DEFAULTS = { theme: 'clay', shape: 'auto', glyphs: 'unicode', place: 'below', time: 'elapsed', gap: 1, hide: [], hint: true }
+const GAPS = [0, 1, 2]
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max']
 
 // What the band shows between redraws. Preferences live in $.store so every
@@ -32,11 +33,12 @@ function cleanPrefs(saved) {
   if (!TIME_MODES.includes(p.time)) p.time = DEFAULTS.time
   p.hide = Array.isArray(p.hide) ? p.hide.filter((id) => HIDEABLE.includes(id)) : []
   p.hint = p.hint !== false
+  if (!GAPS.includes(p.gap)) p.gap = DEFAULTS.gap
   return p
 }
 
 function describePrefs(p) {
-  const parts = [`theme ${p.theme}`, `shape ${p.shape}`, `glyphs ${p.glyphs}`, `time ${p.time}`, `${p.place} the prompt`]
+  const parts = [`theme ${p.theme}`, `shape ${p.shape}`, `glyphs ${p.glyphs}`, `time ${p.time}`, `gap ${p.gap}`, `${p.place} the prompt`]
   if (p.hide.length) parts.push(`hiding ${p.hide.join(', ')}`)
   if (!p.hint) parts.push("Claude Code's hint line off")
   return parts.join(' · ')
@@ -56,6 +58,7 @@ function applyArgs(p, args) {
     else if (PLACES.includes(w)) next.place = w
     else if (w === 'time' && TIME_MODES.includes(words[i + 1])) next.time = words[(i += 1)]
     else if (TIME_MODES.includes(w)) next.time = w
+    else if (w === 'gap' && GAPS.includes(Number(words[i + 1]))) next.gap = Number(words[(i += 1)])
     else if (w === 'hint') {
       next.hint = words[i + 1] !== 'off'
       if (words[i + 1] === 'on' || words[i + 1] === 'off') i += 1
@@ -65,7 +68,7 @@ function applyArgs(p, args) {
       next.hide = w === 'hide' ? [...new Set([...next.hide, ...ids])] : next.hide.filter((id) => !ids.includes(id))
       i = words.length
     } else {
-      return `Unknown option "${w}". Themes: ${THEME_NAMES.join(', ')}; shapes: ${SHAPES.join(', ')}; glyphs: ${GLYPH_NAMES.join(', ')}; place: below, above; time: ${TIME_MODES.join(', ')}; hide/show <segment>; hint on|off; reset.`
+      return `Unknown option "${w}". Themes: ${THEME_NAMES.join(', ')}; shapes: ${SHAPES.join(', ')}; glyphs: ${GLYPH_NAMES.join(', ')}; place: below, above; time: ${TIME_MODES.join(', ')}; gap 0|1|2; hide/show <segment>; hint on|off; reset.`
     }
   }
   return next
@@ -155,7 +158,7 @@ export function register(on) {
       await $.command.register({
         name: 'band',
         description: 'Pick the status band theme, shape and place',
-        argumentHint: '[theme | shape | glyphs | above | below | time <mode> | hide <segment> | show <segment> | reset]',
+        argumentHint: '[theme | shape | glyphs | above | below | time <mode> | gap <rows> | hide <segment> | show <segment> | reset]',
         immediate: true,
       })
     } catch {}
@@ -187,15 +190,16 @@ export function register(on) {
     return result
   })
 
-  // Under the prompt, in the hint line's place. Claude Code's own hint
-  // (`esc to interrupt`, the PR pill) stays on the row below unless turned off.
+  // Under the prompt, in the hint line's place, with `gap` blank rows between
+  // it and the footer line above. Claude Code's own hint (`esc to interrupt`,
+  // the PR pill) stays on the row below unless turned off.
   on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
     if (prefs.place !== 'below' || e.surface !== 'terminal') return next(e)
     const { Box, Text } = $.ui.resolve(e)
     const columns = Math.max(20, ((e.viewport && e.viewport.columns) || 100) - 4)
-    const band = drawBand(await snapshot($), prefs, columns, Text)
-    if (!prefs.hint || !e.props.hint) return band
-    return Box({ flexDirection: 'column', children: [band, await next(e)] })
+    const children = [drawBand(await snapshot($), prefs, columns, Text)]
+    if (prefs.hint && e.props.hint) children.push(await next(e))
+    return Box({ flexDirection: 'column', marginTop: prefs.gap, children })
   })
 
   // Above the prompt, in the band other mods share; theirs stays beneath ours.

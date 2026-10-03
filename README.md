@@ -73,6 +73,7 @@ Or set things directly. Each word sets whatever it names:
 /band nerd                 glyphs: unicode | nerd | ascii
 /band above                place: below | above
 /band time clock           time beside the cost: elapsed | clock (13:24) | clock12 (01:24PM) | off
+/band gap 1                blank rows between the band and the footer line above it: 0 | 1 (default) | 2
 /band hide cost git        hide: model dir git ctx 5h 7d spend cost (quota = all windows)
 /band show cost
 /band hint off             drop Claude Code's own hint line under the band
