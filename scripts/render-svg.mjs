@@ -21,6 +21,36 @@ const LABEL = 92
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
+// Block elements are drawn as rectangles, the way a terminal fills its
+// cells, so half rows and corners line up whatever font renders the SVG.
+// Each is [x, y, w, h] as fractions of one cell.
+const BLOCKS = {
+  '█': [0, 0, 1, 1],
+  '▄': [0, 0.5, 1, 0.5],
+  '▀': [0, 0, 1, 0.5],
+  '▐': [0.5, 0, 0.5, 1],
+  '▌': [0, 0, 0.5, 1],
+  '▗': [0.5, 0.5, 0.5, 0.5],
+  '▖': [0, 0.5, 0.5, 0.5],
+  '▝': [0.5, 0, 0.5, 0.5],
+  '▘': [0, 0, 0.5, 0.5],
+}
+const isBlocks = (text) => [...text].every((c) => c === ' ' || BLOCKS[c])
+
+function blockRects(run, left, top) {
+  let out = ''
+  let col = 0
+  for (const c of run.text) {
+    const b = BLOCKS[c]
+    if (b) {
+      const [x, y, w, h] = b
+      out += `<rect x="${(left + (col + x) * CELL).toFixed(1)}" y="${(top + y * ROW).toFixed(1)}" width="${(w * CELL + 0.6).toFixed(1)}" height="${(h * ROW + 0.4).toFixed(1)}" fill="${run.fg}" shape-rendering="crispEdges"/>`
+    }
+    col += 1
+  }
+  return out
+}
+
 // One terminal strip: the terminal's own background, then each row of runs.
 function strip(lines, x, y, width, bg) {
   let out = `<rect x="${x}" y="${y}" width="${width}" height="${lines.length * ROW + 16}" rx="8" fill="${bg}"/>`
@@ -32,7 +62,9 @@ function strip(lines, x, y, width, bg) {
       const left = x + 14 + col * CELL
       // Neighbouring fills overlap by a hair so no seam shows between them.
       if (run.bg) out += `<rect x="${left.toFixed(1)}" y="${top}" width="${(w * CELL + 0.6).toFixed(1)}" height="${ROW + 0.6}" fill="${run.bg}" shape-rendering="crispEdges"/>`
-      if (run.text.trim()) {
+      if (run.fg && isBlocks(run.text)) {
+        out += blockRects(run, left, top)
+      } else if (run.text.trim()) {
         out +=
           `<text x="${left.toFixed(1)}" y="${top + ROW / 2 + FONT * 0.36}" textLength="${(w * CELL).toFixed(1)}" lengthAdjust="spacingAndGlyphs"` +
           ` fill="${run.fg || '#E8E5DA'}"${run.bold ? ' font-weight="700"' : ''} xml:space="preserve">${esc(run.text)}</text>`

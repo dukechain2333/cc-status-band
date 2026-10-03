@@ -114,12 +114,30 @@ test('every row fits the width it was given, and a stretched band fills it', () 
   }
 })
 
-test('a wide terminal gets one row, usage pushed to the right end', () => {
+test('a wide terminal gets one line, centred in a two-row band, usage at the right end', () => {
   const band = layoutBand(DEMOS.steady, { theme: 'clay' }, 200)
   assert.equal(band.rows.length, 1)
-  const text = plain(paint(band))
-  assert.equal(textWidth(text), 200)
-  assert.match(text, /main \+2 ~3 ↑1 {4,}ctx/)
+  const [top, middle, bottom] = plain(paint(band)).split('\n')
+  assert.equal(top, ' ' + '▄'.repeat(198) + ' ')
+  assert.equal(bottom, ' ' + '▀'.repeat(198) + ' ')
+  assert.ok(middle.startsWith('▐ you@macbook') && middle.endsWith(' ▌'), middle)
+  assert.equal(textWidth(middle), 200)
+  assert.match(middle, /main \+2 ~3 ↑1 {4,}ctx/)
+})
+
+test('two lines join into one block with stepped corners', () => {
+  const lines = plain(renderRuns(DEMOS.steady, { theme: 'clay' }, 150)).split('\n')
+  assert.equal(lines.length, 2)
+  assert.ok(lines[0].startsWith('▗ ') && lines[0].endsWith(' ▖'), lines[0])
+  assert.ok(lines[1].startsWith('▝ ') && lines[1].endsWith(' ▘'), lines[1])
+  // One fill from edge to edge on both rows: the rows meet with no seam
+  const rows = paint(layoutBand(DEMOS.steady, { theme: 'clay' }, 150))
+  for (const runs of rows) assert.ok(runs.slice(1, -1).every((r) => r.bg === '#33302C'))
+})
+
+test('without block glyphs, or with rows 1, the band stays one flat row', () => {
+  assert.equal(paint(layoutBand(DEMOS.steady, { glyphs: 'ascii' }, 220)).length, 1)
+  assert.equal(paint(layoutBand(DEMOS.steady, { rows: 1 }, 220)).length, 1)
 })
 
 test('a narrower terminal splits where-you-are from how-much-is-left', () => {
@@ -141,7 +159,7 @@ test('rows 1 keeps one folded row; fit keeps the band at its content width', () 
   assert.equal(one.rows.length, 1)
   assert.ok(!plain(paint(one)).includes('84k'))
   const fit = layoutBand(DEMOS.steady, { theme: 'clay', width: 'fit' }, 220)
-  assert.ok(textWidth(plain(paint(fit))) < 220)
+  assert.ok(plain(paint(fit)).split('\n').every((line) => textWidth(line) < 220))
 })
 
 test('folding drops detail before segments', () => {
@@ -202,7 +220,7 @@ test('hiding cost keeps the time', () => {
 })
 
 test('the band shape is one fill split by dividers', () => {
-  const band = layoutBand(DEMOS.steady, { theme: 'clay', shape: 'band', glyphs: 'nerd', width: 'fit' }, 220)
+  const band = layoutBand(DEMOS.steady, { theme: 'clay', shape: 'band', glyphs: 'nerd', width: 'fit', rows: 1 }, 220)
   const runs = paint(band)[0]
   const text = plain([runs])
   assert.ok(text.startsWith('\uE0B6') && text.endsWith('\uE0B4'), text)
@@ -218,8 +236,8 @@ test('the model stays legible on a bare row', () => {
 })
 
 test('the host segment reads user@host', () => {
-  const text = plain(renderRuns({ ...DEMOS.steady, user: 'william', host: 'macbook' }, { theme: 'clay' }, 220))
-  assert.ok(text.startsWith(' william@macbook │ ✻ Opus 5.5'), text)
+  const text = plain(renderRuns({ ...DEMOS.steady, user: 'william', host: 'macbook' }, { theme: 'clay' }, 220)).split('\n')[1]
+  assert.ok(text.startsWith('▐ william@macbook │ ✻ Opus 5.5'), text)
   assert.ok(!plain(renderRuns(DEMOS.steady, { hide: ['host'] }, 220)).includes('@'))
 })
 

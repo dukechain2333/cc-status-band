@@ -1,6 +1,6 @@
 # Status Band
 
-A designed status band for [Claude Code](https://code.claude.com). One full-width band above the prompt that shows who and where you are, the model and its effort, git, how full the context window is, how much of your 5-hour and weekly quota is **left**, and the time or what the session has cost. When one row isn't enough it grows to two: where you are on top, what you've used below.
+A designed status band for [Claude Code](https://code.claude.com). One full-width band above the prompt that shows who and where you are, the model and its effort, git, how full the context window is, how much of your 5-hour and weekly quota is **left**, and the time or what the session has cost. The band always stands two rows tall: on a wide terminal one line sits centred between half rows of fill; on a narrower one it splits into two lines, where you are on top and what you've used below, in the same block.
 
 [中文说明](README.zh-CN.md)
 
@@ -26,7 +26,7 @@ It ships two ways from one codebase:
 
 ![States: fresh, steady, warm, hot, API key](docs/states.svg)
 
-The band stretches across the terminal. When everything fits on one row, usage sits at the right end; otherwise the band takes a second row, and only a row that still overflows folds its detail:
+The band stretches across the terminal and stands two rows tall. When everything fits on one line, that line is centred and usage sits at the right end; otherwise the two groups take a line each, and only a line that still overflows folds its detail:
 
 ![The same session at 190, 140, 100 and 72 columns](docs/widths.svg)
 
@@ -73,7 +73,7 @@ Or set things directly. Each word sets whatever it names:
 /band band                 shape: auto | chips | band | arrows | line
 /band nerd                 glyphs: unicode | nerd | ascii
 /band below                place: above (default) | below
-/band rows 1               rows: 2 (default; splits when one row is too narrow) | 1
+/band rows 1               rows: 2 (default; a two-row-tall band) | 1 (one flat row)
 /band fit                  width: full (default; the band spans the terminal) | fit
 /band time clock           time beside the cost: elapsed | clock (13:24) | clock12 (01:24PM) | off
 /band gap 1                blank rows between the band and the footer line above it: 0 | 1 (default) | 2
@@ -130,7 +130,7 @@ Undo with `node scripts/install-statusline.mjs --uninstall`.
 | **Aurora** | cool, vivid dark terminals | arrows |
 | **Ink** | anything; colored text, no fills | line |
 
-Any shape works with any filled theme: **chips** (a pill per segment), **band** (one pill around everything, segments split by `│`), **arrows** (powerline) or **line** (no fills). **Chips** and **arrows** draw rounded and pointed caps with [Nerd Font](https://www.nerdfonts.com) glyphs when you pick the `nerd` glyph set; with the default `unicode` set they have square ends, which every font can draw. `ascii` avoids everything outside ASCII.
+Any shape works with any filled theme: **chips** (a pill per segment), **band** (one block around everything, segments split by `│`, two rows tall with stepped corners drawn from block characters), **arrows** (powerline) or **line** (no fills). **Chips** and **arrows** draw rounded and pointed caps with [Nerd Font](https://www.nerdfonts.com) glyphs when you pick the `nerd` glyph set; with the default `unicode` set they have square ends, which every font can draw. `ascii` avoids everything outside ASCII.
 
 Preview them in your own terminal and font:
 

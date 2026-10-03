@@ -4,7 +4,7 @@ The band was laid out on a Claude Design canvas before any code was written: an 
 
 ## Principles
 
-- **At most two rows, never wrapped.** One row when everything fits; otherwise where-you-are and how-much-is-left each get a row. Detail folds away only in a row that still overflows.
+- **Two rows tall, one block.** On a wide terminal one line sits centred between half rows of fill (`▄` above, `▀` below); on a narrower one the two groups take a line each. Either way the band is two rows high and reads as one shape. Detail folds away only in a line that still overflows.
 - **Color carries urgency; layout doesn't move.** A segment never changes position because a number crossed a threshold. Only its color does.
 - **Remaining, not spent.** Quota is shown as what is left, with a bar that drains, because that is the number you act on.
 - **Quiet by default.** Labels (`ctx`, `5h`, `left`) and secondary numbers use the muted tone; the figures that matter are bold.
@@ -71,6 +71,6 @@ Full values live in [`core/themes.js`](../core/themes.js).
 ## Shapes
 
 - **Chips**: separate pills one cell apart. Rounded caps with the Nerd Font glyph set (`` ``), square ends otherwise.
-- **Band** (default for Clay and Paper): one pill around every segment, filled with tone `b`, segments split by a `│` in the theme's `divider` color, stretched to the terminal's width. The model keeps the accent for `✻` and its pips.
+- **Band** (default for Clay and Paper): one block around every segment, filled with tone `b`, segments split by a `│` in the theme's `divider` color, stretched to the terminal's width. The model keeps the accent for `✻` and its pips. Two rows tall by default, with stepped corners: the edge columns fill only the inner half of the band (`▐ ▌` beside a centred line, `▗ ▖ ▝ ▘` beside two lines), so each corner loses a quarter cell. Block elements are in every terminal font, so this needs no Nerd Font. With `rows 1` it is one flat row with Nerd Font caps.
 - **Arrows**: flush segments joined by powerline arrows (``) with Nerd Fonts, flush blocks otherwise.
 - **Line**: no fills, segments separated by a dim `│`.

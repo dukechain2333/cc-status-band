@@ -207,16 +207,18 @@ function itemWidth(item) {
 }
 
 // Cells the shape adds around n segments.
-function chromeWidth(shape, g, n) {
+// A band has an edge glyph at each end when it is two rows tall (block
+// elements) or when Nerd Font caps round it off.
+function chromeWidth(shape, g, n, edged) {
   if (n === 0) return 0
   if (shape === 'line') return (n - 1) * 3
   if (shape === 'chips') return n * (2 + (g.capLeft ? 2 : 0)) + (n - 1)
-  if (shape === 'band') return (n - 1) * 3 + 2 + (g.capLeft ? 2 : 0)
+  if (shape === 'band') return (n - 1) * 3 + 2 + (edged ? 2 : 0)
   return n * (2 + (g.arrow ? 1 : 0))
 }
 
-export function measure(segments, shape, g) {
-  let w = chromeWidth(shape, g, segments.length)
+export function measure(segments, shape, g, edged = !!g.capLeft) {
+  let w = chromeWidth(shape, g, segments.length, edged)
   for (const seg of segments) for (const item of seg.items) w += itemWidth(item)
   return w
 }
@@ -233,13 +235,17 @@ export function layoutBand(snapshot, options = {}, columns = 120) {
   const shape = theme.model.bg ? resolveShape(options.shape, theme) : 'line'
   const glyphs = resolveGlyphs(options.glyphs)
   const maxRows = options.rows === 1 ? 1 : 2
+  // With two rows allowed the band stands two rows tall: one line centred
+  // between half rows of fill, or two lines when one is too short.
+  const tall = shape === 'band' && maxRows === 2 && !!glyphs.padTop
+  const edged = tall || !!glyphs.capLeft
   const pick = {
     hide: expandHide(options.hide),
     time: TIME_MODES.includes(options.time) ? options.time : 'elapsed',
   }
   const levels = Object.fromEntries(SEGMENT_IDS.map((id) => [id, 0]))
   const build = () => buildSegments(snapshot, glyphs, levels, pick)
-  const fits = (row) => measure(row, shape, glyphs) <= columns
+  const fits = (row) => measure(row, shape, glyphs, edged) <= columns
   const split = (segs) =>
     [segs.filter((seg) => IDENTITY.includes(seg.id)), segs.filter((seg) => !IDENTITY.includes(seg.id))].filter((row) => row.length)
 
@@ -266,6 +272,8 @@ export function layoutBand(snapshot, options = {}, columns = 120) {
     columns,
     // Only the one-band shape stretches; other shapes keep their own width.
     fill: shape === 'band' && options.width !== 'fit',
+    tall,
+    edged,
   }
 }
 
@@ -282,10 +290,32 @@ function barText(item, g) {
 // Turns a laid-out band into rows of runs, { text, fg, bg, bold }. A null fg
 // or bg is the terminal's own color.
 export function paint(band) {
-  return band.rows.map((row) => paintRow(row, band))
+  const { rows, theme: T, glyphs: g } = band
+  if (band.shape !== 'band') return rows.map((row) => paintRow(row, band, {}))
+  // Every row of a band shares one width, so the rows stack into one block.
+  const width = band.fill ? band.columns : Math.max(...rows.map((row) => measure(row, 'band', g, band.edged)))
+  if (!band.tall) return rows.map((row) => paintRow(row, band, { left: g.capLeft, right: g.capRight, width }))
+  if (rows.length === 1) {
+    // One line, centred: half a row of fill above and below, and edges only
+    // beside the text, so each corner steps in by a quarter cell.
+    const half = (glyph) => [
+      { text: ' ', fg: null, bg: null },
+      { text: glyph.repeat(Math.max(0, width - 2)), fg: T.b.bg, bg: null },
+      { text: ' ', fg: null, bg: null },
+    ]
+    return [half(g.padTop), paintRow(rows[0], band, { left: g.edgeLeft, right: g.edgeRight, width }), half(g.padBottom)]
+  }
+  // Two lines: the edge columns fill only the inner half of each row.
+  return rows.map((row, i) =>
+    paintRow(row, band, {
+      left: i === 0 ? g.cornerTL : g.cornerBL,
+      right: i === 0 ? g.cornerTR : g.cornerBR,
+      width,
+    }),
+  )
 }
 
-function paintRow(segments, band) {
+function paintRow(segments, band, frame) {
   const { theme: T, shape, glyphs: g } = band
   // On a bare row the model chip's on-accent colors would vanish into the
   // terminal, so it borrows the plain tone and keeps the accent for its marks.
@@ -299,11 +329,11 @@ function paintRow(segments, band) {
   const bgOf = (i) => (shape === 'line' || !segments[i] ? null : toneOf(segments[i], i).bg)
   // A stretched band fills its spare cells: between the two groups when both
   // share the row, else at the end.
-  const spare = single && band.fill ? Math.max(0, band.columns - measure(segments, shape, g)) : 0
+  const spare = single ? Math.max(0, frame.width - measure(segments, shape, g, band.edged)) : 0
   const groupBreak = segments.findIndex((seg) => !IDENTITY.includes(seg.id))
   const runs = []
   if (single && segments.length) {
-    if (g.capLeft) runs.push({ text: g.capLeft, fg: T.b.bg, bg: null })
+    if (frame.left) runs.push({ text: frame.left, fg: T.b.bg, bg: null })
     runs.push({ text: ' ', fg: T.b.fg, bg: T.b.bg })
   }
   segments.forEach((seg, i) => {
@@ -323,7 +353,7 @@ function paintRow(segments, band) {
       })[role] || tone.fg
 
     if (shape === 'line' && i > 0) runs.push({ text: ` ${g.sep} `, fg: T.sep, bg: null })
-    if (single && i > 0 && spare && i === groupBreak) runs.push({ text: ' '.repeat(3 + spare), fg: T.divider, bg })
+    if (single && i > 0 && spare && band.fill && i === groupBreak) runs.push({ text: ' '.repeat(3 + spare), fg: T.divider, bg })
     else if (single && i > 0) runs.push({ text: ` ${g.sep} `, fg: T.divider, bg })
     if (shape === 'chips' && i > 0) runs.push({ text: ' ', fg: null, bg: null })
     if (shape === 'chips' && g.capLeft) runs.push({ text: g.capLeft, fg: bg, bg: null })
@@ -342,9 +372,9 @@ function paintRow(segments, band) {
     if (shape === 'arrows' && g.arrow) runs.push({ text: g.arrow, fg: bg, bg: bgOf(i + 1) })
   })
   if (single && segments.length) {
-    if (spare && groupBreak <= 0) runs.push({ text: ' '.repeat(spare), fg: T.b.fg, bg: T.b.bg })
+    if (spare && !(band.fill && groupBreak > 0)) runs.push({ text: ' '.repeat(spare), fg: T.b.fg, bg: T.b.bg })
     runs.push({ text: ' ', fg: T.b.fg, bg: T.b.bg })
-    if (g.capRight) runs.push({ text: g.capRight, fg: T.b.bg, bg: null })
+    if (frame.right) runs.push({ text: frame.right, fg: T.b.bg, bg: null })
   }
   return mergeRuns(runs)
 }

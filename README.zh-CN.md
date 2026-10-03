@@ -1,6 +1,6 @@
 # Status Band
 
-为 [Claude Code](https://code.claude.com) 设计的状态栏。一条撑满终端宽度的大圆角条，位于输入框上方，显示：用户与主机、模型与推理强度、当前目录、git 状态、上下文窗口占用、5 小时与每周额度的**剩余**比例，以及时间或本次花费。一行放不下时会扩展成两行：上面是“你在哪”，下面是“用了多少”。
+为 [Claude Code](https://code.claude.com) 设计的状态栏。一条撑满终端宽度的大圆角条，位于输入框上方，显示：用户与主机、模型与推理强度、当前目录、git 状态、上下文窗口占用、5 小时与每周额度的**剩余**比例，以及时间或本次花费。状态栏始终是两行高：宽屏时一行内容上下居中，上下各补半行底色；窄屏时分成两行内容，上面是“你在哪”，下面是“用了多少”，仍是同一个整块。
 
 [English](README.md)
 
@@ -26,7 +26,7 @@
 
 ![各种状态](docs/states.svg)
 
-状态栏会撑满终端宽度。一行放得下时，用量信息靠右；放不下就扩展成第二行，只有仍然溢出的那一行才会折叠细节：
+状态栏撑满终端宽度、两行高。一行放得下时内容居中、用量信息靠右；放不下时两组各占一行，只有仍然溢出的那一行才会折叠细节：
 
 ![190、140、100、72 列下的同一会话](docs/widths.svg)
 
@@ -61,7 +61,7 @@ claude --plugin-dir ./cc-status-band
 /band band                 形状：auto | chips | band | arrows | line
 /band nerd                 字符集：unicode | nerd | ascii
 /band below                位置：above（默认）| below
-/band rows 1               行数：2（默认，一行放不下时分两行）| 1
+/band rows 1               行数：2（默认，两行高的大块）| 1（扁平一行）
 /band fit                  宽度：full（默认，撑满终端）| fit
 /band time clock           花费旁的时间：elapsed（会话时长）| clock（13:24）| clock12（01:24PM）| off
 /band gap 1                状态栏与上方那行之间空几行：0 | 1（默认）| 2
@@ -107,7 +107,7 @@ node ~/.claude/cc-status-band/scripts/install-statusline.mjs --theme clay
 | **Aurora** | 冷色、鲜艳的深色终端 | arrows |
 | **Ink** | 任何终端；只有彩色文字，没有底色 | line |
 
-有底色的主题可以搭配任意形状：**chips**（每段一个圆角块）、**band**（一个大圆角条包住所有段，段之间用 `│` 分隔）、**arrows**（powerline 箭头）或 **line**（无底色）。选择 `nerd` 字符集时，**chips** 和 **arrows** 会用 [Nerd Font](https://www.nerdfonts.com) 字形画出圆角和箭头；默认的 `unicode` 字符集使用方角，任何字体都能显示。`ascii` 只用 ASCII 字符。
+有底色的主题可以搭配任意形状：**chips**（每段一个圆角块）、**band**（一个整块包住所有段，段之间用 `│` 分隔，两行高，四角用方块字符画出小圆角）、**arrows**（powerline 箭头）或 **line**（无底色）。选择 `nerd` 字符集时，**chips** 和 **arrows** 会用 [Nerd Font](https://www.nerdfonts.com) 字形画出圆角和箭头；默认的 `unicode` 字符集使用方角，任何字体都能显示。`ascii` 只用 ASCII 字符。
 
 在自己的终端和字体下预览：
 

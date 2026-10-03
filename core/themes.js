@@ -82,7 +82,11 @@ export const THEME_NAMES = Object.keys(THEMES)
 // `auto` means "the theme's own shape".
 export const SHAPES = ['auto', 'chips', 'arrows', 'line', 'band']
 
-// Chips, the band and arrows draw their rounded and pointed caps with Nerd Font glyphs
+// The two-row band draws its half rows, edges and stepped corners with block
+// elements (▄ ▀ ▐ ▌ ▗ ▖ ▝ ▘), which every terminal font has; ascii has none,
+// so there the band stays one flat row.
+//
+// Chips, the flat band and arrows draw their rounded and pointed caps with Nerd Font glyphs
 // from the Private Use Area. Without a Nerd Font those render as boxes, so the
 // unicode and ascii sets leave the caps out and the chips get square ends.
 export const GLYPHS = {
@@ -104,6 +108,14 @@ export const GLYPHS = {
     half: '╸',
     track: '─',
     none: '—',
+    padTop: '▄',
+    padBottom: '▀',
+    edgeLeft: '▐',
+    edgeRight: '▌',
+    cornerTL: '▗',
+    cornerTR: '▖',
+    cornerBL: '▝',
+    cornerBR: '▘',
   },
   unicode: {
     capLeft: '',
@@ -123,6 +135,14 @@ export const GLYPHS = {
     half: '╸',
     track: '─',
     none: '—',
+    padTop: '▄',
+    padBottom: '▀',
+    edgeLeft: '▐',
+    edgeRight: '▌',
+    cornerTL: '▗',
+    cornerTR: '▖',
+    cornerBL: '▝',
+    cornerBR: '▘',
   },
   ascii: {
     capLeft: '',
