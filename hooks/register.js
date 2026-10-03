@@ -1,8 +1,8 @@
-// status-band: draws the band under the Claude Code prompt.
+// status-band: draws the band above the Claude Code prompt.
 //
 // The band itself is built by ../core, which the classic statusLine script
 // shares. This module only gathers the session's figures through the mods
-// API, draws the band at the render site the user picked, and runs the /band
+// API, draws the band in the AbovePrompt render site, and runs the /band
 // picker.
 
 import { HIDEABLE, TIME_MODES, layoutBand, paint } from '../core/band.js'
@@ -12,20 +12,15 @@ import { fromSession } from '../core/snapshot.js'
 import { GLYPH_NAMES, SHAPES, THEMES, THEME_NAMES } from '../core/themes.js'
 
 const PANE = 'status-band'
-const PLACES = ['below', 'above']
 const DEFAULTS = {
   theme: 'clay',
   shape: 'auto',
   glyphs: 'unicode',
-  place: 'above',
   time: 'elapsed',
   rows: 2,
   width: 'full',
-  gap: 1,
   hide: [],
-  hint: true,
 }
-const GAPS = [0, 1, 2]
 const WIDTHS = ['full', 'fit']
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max']
 
@@ -38,25 +33,24 @@ let home = ''
 let user = ''
 let host = ''
 
+// Keeps only the keys the band still reads, so settings saved by an older
+// version (such as `place`) drop away.
 function cleanPrefs(saved) {
-  const p = { ...DEFAULTS, ...(saved && typeof saved === 'object' ? saved : {}) }
-  if (!THEME_NAMES.includes(p.theme)) p.theme = DEFAULTS.theme
-  if (!SHAPES.includes(p.shape)) p.shape = DEFAULTS.shape
-  if (!GLYPH_NAMES.includes(p.glyphs)) p.glyphs = DEFAULTS.glyphs
-  if (!PLACES.includes(p.place)) p.place = DEFAULTS.place
-  if (!TIME_MODES.includes(p.time)) p.time = DEFAULTS.time
-  p.hide = Array.isArray(p.hide) ? p.hide.filter((id) => HIDEABLE.includes(id)) : []
-  p.hint = p.hint !== false
-  if (!GAPS.includes(p.gap)) p.gap = DEFAULTS.gap
-  if (p.rows !== 1 && p.rows !== 2) p.rows = DEFAULTS.rows
-  if (!WIDTHS.includes(p.width)) p.width = DEFAULTS.width
+  const s = saved && typeof saved === 'object' ? saved : {}
+  const p = { ...DEFAULTS }
+  if (THEME_NAMES.includes(s.theme)) p.theme = s.theme
+  if (SHAPES.includes(s.shape)) p.shape = s.shape
+  if (GLYPH_NAMES.includes(s.glyphs)) p.glyphs = s.glyphs
+  if (TIME_MODES.includes(s.time)) p.time = s.time
+  if (s.rows === 1 || s.rows === 2) p.rows = s.rows
+  if (WIDTHS.includes(s.width)) p.width = s.width
+  if (Array.isArray(s.hide)) p.hide = s.hide.filter((id) => HIDEABLE.includes(id))
   return p
 }
 
 function describePrefs(p) {
-  const parts = [`theme ${p.theme}`, `shape ${p.shape}`, `glyphs ${p.glyphs}`, `time ${p.time}`, `rows ${p.rows}`, `width ${p.width}`, `gap ${p.gap}`, `${p.place} the prompt`]
+  const parts = [`theme ${p.theme}`, `shape ${p.shape}`, `glyphs ${p.glyphs}`, `time ${p.time}`, `rows ${p.rows}`, `width ${p.width}`]
   if (p.hide.length) parts.push(`hiding ${p.hide.join(', ')}`)
-  if (!p.hint) parts.push("Claude Code's hint line off")
   return parts.join(' · ')
 }
 
@@ -71,22 +65,19 @@ function applyArgs(p, args) {
     if (THEME_NAMES.includes(w)) next.theme = w
     else if (SHAPES.includes(w)) next.shape = w
     else if (GLYPH_NAMES.includes(w)) next.glyphs = w
-    else if (PLACES.includes(w)) next.place = w
+    else if (w === 'below') return 'The band always sits above the prompt.'
+    else if (w === 'above') continue
     else if (w === 'time' && TIME_MODES.includes(words[i + 1])) next.time = words[(i += 1)]
     else if (TIME_MODES.includes(w)) next.time = w
-    else if (w === 'gap' && GAPS.includes(Number(words[i + 1]))) next.gap = Number(words[(i += 1)])
     else if (w === 'rows' && ['1', '2'].includes(words[i + 1])) next.rows = Number(words[(i += 1)])
     else if (WIDTHS.includes(w)) next.width = w
-    else if (w === 'hint') {
-      next.hint = words[i + 1] !== 'off'
-      if (words[i + 1] === 'on' || words[i + 1] === 'off') i += 1
-    } else if (w === 'hide' || w === 'show') {
+    else if (w === 'hide' || w === 'show') {
       const ids = words.slice(i + 1).filter((id) => HIDEABLE.includes(id))
       if (!ids.length) return `Name a segment to ${w}: ${HIDEABLE.join(', ')}`
       next.hide = w === 'hide' ? [...new Set([...next.hide, ...ids])] : next.hide.filter((id) => !ids.includes(id))
       i = words.length
     } else {
-      return `Unknown option "${w}". Themes: ${THEME_NAMES.join(', ')}; shapes: ${SHAPES.join(', ')}; glyphs: ${GLYPH_NAMES.join(', ')}; place: below, above; time: ${TIME_MODES.join(', ')}; rows 1|2; full|fit; gap 0|1|2; hide/show <segment>; hint on|off; reset.`
+      return `Unknown option "${w}". Themes: ${THEME_NAMES.join(', ')}; shapes: ${SHAPES.join(', ')}; glyphs: ${GLYPH_NAMES.join(', ')}; time: ${TIME_MODES.join(', ')}; rows 1|2; full|fit; hide/show <segment>; reset.`
     }
   }
   return next
@@ -126,10 +117,7 @@ async function readSettings($) {
     const perModel = settings.modelSettings && settings.modelSettings[model]
     const level = model in seen ? seen[model] : (perModel && perModel.effortLevel) || settings.effortLevel
     effort = EFFORTS.includes(level) ? level : null
-    return settings
-  } catch {
-    return {}
-  }
+  } catch {}
 }
 
 async function rememberEffort($, model, level) {
@@ -166,7 +154,7 @@ export function register(on) {
     home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''
     user = (await $.env.get('USER')) || (await $.env.get('USERNAME')) || ''
     host = await readHost($)
-    const settings = await readSettings($)
+    await readSettings($)
     await refreshGit($)
 
     // Keeps the reset countdowns and git state current while the session idles.
@@ -175,18 +163,11 @@ export function register(on) {
       $.ui.invalidate('ui.render')
     })
 
-    // A statusLine command draws its own row under the prompt, so with both
-    // the user would see two bars. Say so once per machine.
-    if (settings.statusLine && prefs.place === 'below' && !(await $.store.get('toldAboutStatusLine'))) {
-      await $.store.set('toldAboutStatusLine', true)
-      $.ui.toast('status-band: your settings also set a statusLine, so you may see two bars. Remove "statusLine" from settings.json, or run /band above.')
-    }
-
     try {
       await $.command.register({
         name: 'band',
-        description: 'Pick the status band theme, shape and place',
-        argumentHint: '[theme | shape | glyphs | above | below | time <mode> | rows 1|2 | full | fit | gap <rows> | hide <segment> | show <segment> | reset]',
+        description: 'Pick the status band theme, shape and layout',
+        argumentHint: '[theme | shape | glyphs | time <mode> | rows 1|2 | full | fit | hide <segment> | show <segment> | reset]',
         immediate: true,
       })
     } catch {}
@@ -218,21 +199,9 @@ export function register(on) {
     return result
   })
 
-  // Under the prompt, in the hint line's place, with `gap` blank rows between
-  // it and the footer line above. Claude Code's own hint (`esc to interrupt`,
-  // the PR pill) stays on the row below unless turned off.
-  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
-    if (prefs.place !== 'below' || e.surface !== 'terminal') return next(e)
-    const { Box, Text } = $.ui.resolve(e)
-    const columns = Math.max(20, ((e.viewport && e.viewport.columns) || 100) - 2)
-    const children = [drawBand(await snapshot($), prefs, columns, { Box, Text })]
-    if (prefs.hint && e.props.hint) children.push(await next(e))
-    return Box({ flexDirection: 'column', marginTop: prefs.gap, children })
-  })
-
   // Above the prompt, in the band other mods share; theirs stays beneath ours.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (prefs.place !== 'above' || e.props.hasSurvey || e.surface !== 'terminal') return next(e)
+    if (e.props.hasSurvey || e.surface !== 'terminal') return next(e)
     const { Box, Text } = $.ui.resolve(e)
     // Claude Code draws its `[-]` collapse control over the band's last three
     // cells, so the band stops one cell short of it.
@@ -256,7 +225,7 @@ export function register(on) {
   })
 
   // The /band picker: one row per theme, previewed with this session's own
-  // figures, then the shape, glyph and placement choices.
+  // figures, then the shape, layout, glyph and time choices.
   on('ui.render', { component: 'Pane' }, async ($, e, next) => {
     if (e.requestId !== PANE) return next(e)
     const { Box, Text, Button } = $.ui.resolve(e)
@@ -340,10 +309,6 @@ export function register(on) {
           ['clock', 'clock 24h', 'k'],
           ['clock12', 'clock 12h', 'h'],
           ['off', 'off', 'o'],
-        ]),
-        optionRow('place', 'place', [
-          ['below', 'below prompt', 'b'],
-          ['above', 'above prompt', 't'],
         ]),
         Text({ children: [' '] }),
         Text({ dimColor: true, children: ['Saved for every session. Esc closes. /band help shows the current setup.'] }),

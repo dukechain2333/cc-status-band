@@ -60,14 +60,11 @@ claude --plugin-dir ./cc-status-band
 /band aurora               主题：clay | paper | aurora | ink
 /band band                 形状：auto | chips | band | arrows | line
 /band nerd                 字符集：unicode | nerd | ascii
-/band below                位置：above（默认）| below
 /band rows 1               行数：2（默认，两行高的大块）| 1（扁平一行）
 /band fit                  宽度：full（默认，撑满终端）| fit
 /band time clock           花费旁的时间：elapsed（会话时长）| clock（13:24）| clock12（01:24PM）| off
-/band gap 1                状态栏与上方那行之间空几行：0 | 1（默认）| 2
 /band hide cost git        隐藏段：host model dir git ctx 5h 7d spend cost（quota = 所有额度窗口）
 /band show cost
-/band hint off             不再在状态栏下方保留 Claude Code 自带的提示行
 /band reset
 /band help                 查看当前设置
 ```

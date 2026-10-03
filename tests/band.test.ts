@@ -94,20 +94,12 @@ test('by default the band draws above the prompt with every segment', async ($, 
   }
 })
 
-test('below the prompt, Claude Code keeps its hint line beneath the band', async ($, on) => {
-  session(on, new Map([['prefs', { place: 'below' }]]))
-  await start($)
-  const ui = await $.ui.mount(HINT)
-  expect(await bandText(ui)).toContain('Opus 5.5')
-  expect(await ui.find({ type: 'Text', text: '? for shortcuts' })).toBeDefined()
-})
-
 test('/band with words saves the choice and redraws', async ($, on) => {
   const { saved } = session(on)
   await start($)
   const answer = await $.command.run({ command: 'band', args: 'aurora line nerd' })
   expect(answer.text).toContain('theme aurora')
-  expect(saved.get('prefs')).toMatchObject({ theme: 'aurora', shape: 'line', glyphs: 'nerd', place: 'above' })
+  expect(saved.get('prefs')).toMatchObject({ theme: 'aurora', shape: 'line', glyphs: 'nerd' })
 })
 
 test('/band time switches the cost segment to the wall clock', async ($, on) => {
@@ -131,16 +123,19 @@ test('/band hide cost keeps the clock', async ($, on) => {
   expect(text).toMatch(/◷ \d\d:\d\d/)
 })
 
-test('below the prompt the band keeps one blank row above it, and /band gap changes it', async ($, on) => {
-  const { saved } = session(on, new Map([['prefs', { place: 'below' }]]))
+test('the band only sits above the prompt: /band below is refused', async ($, on) => {
+  const { saved } = session(on)
   await start($)
-  let ui = await $.ui.mount(HINT)
-  expect((await ui.find({ type: 'Box' })).props.marginTop).toBe(1)
-  await ui.unmount()
-  await $.command.run({ command: 'band', args: 'gap 2' })
-  expect(saved.get('prefs')).toMatchObject({ gap: 2 })
-  ui = await $.ui.mount(HINT)
-  expect((await ui.find({ type: 'Box' })).props.marginTop).toBe(2)
+  const answer = await $.command.run({ command: 'band', args: 'below' })
+  expect(answer.text).toBe('The band always sits above the prompt.')
+  expect(saved.get('prefs')).toBeUndefined()
+})
+
+test('a place saved by an older version is ignored', async ($, on) => {
+  session(on, new Map([['prefs', { place: 'below', theme: 'aurora' }]]))
+  await start($)
+  expect(await bandText(await $.ui.mount(ABOVE))).toContain('Opus 5.5')
+  expect((await $.command.run({ command: 'band', args: 'help' })).text).not.toContain('below')
 })
 
 test('/band rejects a word it does not know', async ($, on) => {
@@ -151,7 +146,7 @@ test('/band rejects a word it does not know', async ($, on) => {
   expect(saved.get('prefs')).toBeUndefined()
 })
 
-test('above the prompt, the hint line is left alone', async ($, on) => {
+test('the hint line under the prompt is left alone', async ($, on) => {
   session(on)
   await start($)
   const ui = await $.ui.mount(HINT)

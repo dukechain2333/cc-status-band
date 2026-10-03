@@ -52,7 +52,7 @@ claude --plugin-dir ./cc-status-band
 
 ### Customize
 
-Run `/band` to open the picker. A digit picks a theme, a letter picks a shape, glyph set or placement, and every row previews your current session:
+Run `/band` to open the picker. A digit picks a theme, a letter picks a shape, width, rows, glyph set or time, and every row previews your current session:
 
 ```text
 ❯ 1: Clay      ✻ Opus 5.5 ●●●●○  ~/c/cc-status-band  ⎇ main ●  ctx ━━━━── 42%  5h 72% ↻2h14m
@@ -61,9 +61,10 @@ Run `/band` to open the picker. A digit picks a theme, a letter picks a shape, g
   4: Ink       …
 
 shape    d: theme default   c: chips   a: arrows   l: line   w: one band
+width    f: full width   i: fit content
+rows     m: up to two   s: one row
 glyphs   u: unicode   n: nerd font   p: plain ascii
 time     e: session time   k: clock 24h   h: clock 12h   o: off
-place    b: below prompt   t: above prompt
 ```
 
 Or set things directly. Each word sets whatever it names:
@@ -72,14 +73,11 @@ Or set things directly. Each word sets whatever it names:
 /band aurora               theme: clay | paper | aurora | ink
 /band band                 shape: auto | chips | band | arrows | line
 /band nerd                 glyphs: unicode | nerd | ascii
-/band below                place: above (default) | below
 /band rows 1               rows: 2 (default; a two-row-tall band) | 1 (one flat row)
 /band fit                  width: full (default; the band spans the terminal) | fit
 /band time clock           time beside the cost: elapsed | clock (13:24) | clock12 (01:24PM) | off
-/band gap 1                blank rows between the band and the footer line above it: 0 | 1 (default) | 2
 /band hide cost git        hide: host model dir git ctx 5h 7d spend cost (quota = all windows)
 /band show cost
-/band hint off             drop Claude Code's own hint line under the band
 /band reset
 /band help                 print the current setup
 ```
@@ -153,7 +151,7 @@ hooks/register.js        the mod: gathers figures via the mods API, draws, runs 
 statusline/status-band.mjs  the classic statusLine command
 ```
 
-The mod reads the user, host, model, working directory and usage (`context`, `rateLimits`, `cost`) from `$.session`, takes the live effort from each `turn.step`, runs `git status --porcelain=v2` through `$.process.run` after each turn and every 20 seconds, and redraws on `session.measure`. It draws in the `AbovePrompt` render site, the band directly above the prompt, or in the `PromptHint` site under the prompt if you choose `below`, where it keeps Claude Code's own hint line beneath it.
+The mod reads the user, host, model, working directory and usage (`context`, `rateLimits`, `cost`) from `$.session`, takes the live effort from each `turn.step`, runs `git status --porcelain=v2` through `$.process.run` after each turn and every 20 seconds, and redraws on `session.measure`. It draws only in the `AbovePrompt` render site, the band directly above the prompt, and leaves the line under the prompt to Claude Code.
 
 ## Develop
 
